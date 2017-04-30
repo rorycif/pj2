@@ -29,7 +29,7 @@ RecordBasedFileManager::~RecordBasedFileManager()
 {
 }
 
-RC RecordBasedFileManager::createFile(const string &fileName) 
+RC RecordBasedFileManager::createFile(const string &fileName)
 {
     // Creating a new paged file.
     if (_pf_manager->createFile(fileName))
@@ -54,22 +54,22 @@ RC RecordBasedFileManager::createFile(const string &fileName)
     return SUCCESS;
 }
 
-RC RecordBasedFileManager::destroyFile(const string &fileName) 
+RC RecordBasedFileManager::destroyFile(const string &fileName)
 {
     return _pf_manager->destroyFile(fileName);
 }
 
-RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle) 
+RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
     return _pf_manager->openFile(fileName.c_str(), fileHandle);
 }
 
-RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) 
+RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 {
     return _pf_manager->closeFile(fileHandle);
 }
 
-RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) 
+RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid)
 {
     // Gets the size of the record.
     unsigned recordSize = getRecordSize(recordDescriptor, data);
@@ -136,7 +136,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     return SUCCESS;
 }
 
-RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) 
+RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data)
 {
     // Retrieve the specific page
     void * pageData = malloc(PAGE_SIZE);
@@ -158,14 +158,14 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
     return SUCCESS;
 }
 
-RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data) 
+RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data)
 {
     // Parse the null indicator into an array
     int nullIndicatorSize = getNullIndicatorSize(recordDescriptor.size());
     char nullIndicator[nullIndicatorSize];
     memset(nullIndicator, 0, nullIndicatorSize);
     memcpy(nullIndicator, data, nullIndicatorSize);
-    
+
     // We've read in the null indicator, so we can skip past it now
     unsigned offset = nullIndicatorSize;
 
@@ -222,6 +222,18 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
     return SUCCESS;
 }
 
+RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid){
+  cout<< "delete record called\n";
+  cout<< "page, slot "<< rid.pageNum<< " "<< rid.slotNum<<endl;
+//get begining of record
+//  void * data;
+//  readRecord()
+//  unsigned size getRecordSize(recordDescriptor,)//get size of record
+  //get the end of record
+
+  return -1;
+}
+
 // Private helper methods
 
 // Configures a new record based page, and puts it in "page".
@@ -273,13 +285,13 @@ void RecordBasedFileManager::setSlotDirectoryRecordEntry(void * page, unsigned r
 }
 
 // Computes the free space of a page (function of the free space pointer and the slot directory size).
-unsigned RecordBasedFileManager::getPageFreeSpaceSize(void * page) 
+unsigned RecordBasedFileManager::getPageFreeSpaceSize(void * page)
 {
     SlotDirectoryHeader slotHeader = getSlotDirectoryHeader(page);
     return slotHeader.freeSpaceOffset - slotHeader.recordEntriesNumber * sizeof(SlotDirectoryRecordEntry) - sizeof(SlotDirectoryHeader);
 }
 
-unsigned RecordBasedFileManager::getRecordSize(const vector<Attribute> &recordDescriptor, const void *data) 
+unsigned RecordBasedFileManager::getRecordSize(const vector<Attribute> &recordDescriptor, const void *data)
 {
     // Read in the null indicator
     int nullIndicatorSize = getNullIndicatorSize(recordDescriptor.size());
@@ -321,7 +333,7 @@ unsigned RecordBasedFileManager::getRecordSize(const vector<Attribute> &recordDe
 }
 
 // Calculate actual bytes for nulls-indicator for the given field counts
-int RecordBasedFileManager::getNullIndicatorSize(int fieldCount) 
+int RecordBasedFileManager::getNullIndicatorSize(int fieldCount)
 {
     return int(ceil((double) fieldCount / CHAR_BIT));
 }
@@ -437,12 +449,12 @@ void RecordBasedFileManager::getRecordAtOffset(void *page, unsigned offset, cons
     unsigned data_offset = nullIndicatorSize;
     // directory_base: points to the start of our directory of indices
     char *directory_base = start + sizeof(RecordLength) + recordNullIndicatorSize;
-    
+
     for (unsigned i = 0; i < recordDescriptor.size(); i++)
     {
         if (fieldIsNull(nullIndicator, i))
             continue;
-        
+
         // Grab pointer to end of this column
         ColumnOffset endPointer;
         memcpy(&endPointer, directory_base + i * sizeof(ColumnOffset), sizeof(ColumnOffset));

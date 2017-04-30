@@ -43,9 +43,9 @@ struct Attribute {
 };
 
 // Comparison Operator (NOT needed for part 1 of the project)
-typedef enum 
-{ 
-    EQ_OP = 0,  // no condition// = 
+typedef enum
+{
+    EQ_OP = 0,  // no condition// =
     LT_OP,      // <
     LE_OP,      // <=
     GT_OP,      // >
@@ -54,20 +54,28 @@ typedef enum
     NO_OP       // no condition
 } CompOp;
 
+typedef enum{     //used to check when deleting or updating
+  dead =0,
+  alive,
+  moved,
+} statusFlag;
+
 // Slot directory headers for page organization
 // See chapter 9.6.2 of the cow book or lecture 3 slide 16 for more information
 typedef struct SlotDirectoryHeader
 {
     uint16_t freeSpaceOffset;
     uint16_t recordEntriesNumber;
+
 } SlotDirectoryHeader;
 
 // Assignment 2 tip: Make offset negative to represent a forwarding address
 // Negative offset => length = page #, offset = -slot #
 typedef struct SlotDirectoryRecordEntry
 {
-    uint32_t length; 
+    uint32_t length;
     int32_t offset;
+    RID forwardAddress;                  //used if moved
 } SlotDirectoryRecordEntry;
 
 typedef SlotDirectoryRecordEntry* SlotDirectory;
@@ -78,7 +86,7 @@ typedef uint16_t RecordLength;
 
 
 /********************************************************************************
-The scan iterator is NOT required to be implemented for the part 1 of the project 
+The scan iterator is NOT required to be implemented for the part 1 of the project
 ********************************************************************************/
 
 # define RBFM_EOF (-1)  // end of a scan operator
@@ -97,7 +105,7 @@ public:
   RBFM_ScanIterator() {};
   ~RBFM_ScanIterator() {};
 
-  // Never keep the results in the memory. When getNextRecord() is called, 
+  // Never keep the results in the memory. When getNextRecord() is called,
   // a satisfying record needs to be fetched from the file.
   // "data" follows the same format as RecordBasedFileManager::insertRecord().
   RC getNextRecord(RID &rid, void *data) { return RBFM_EOF; };
@@ -111,11 +119,11 @@ public:
   static RecordBasedFileManager* instance();
 
   RC createFile(const string &fileName);
-  
+
   RC destroyFile(const string &fileName);
-  
+
   RC openFile(const string &fileName, FileHandle &fileHandle);
-  
+
   RC closeFile(FileHandle &fileHandle);
 
   //  Format of the data passed into the function is the following:
@@ -125,7 +133,7 @@ public:
   //     Each bit represents whether each field value is null or not.
   //     If k-th bit from the left is set to 1, k-th field value is null. We do not include anything in the actual data part.
   //     If k-th bit from the left is set to 0, k-th field contains non-null values.
-  //     If there are more than 8 fields, then you need to find the corresponding byte first, 
+  //     If there are more than 8 fields, then you need to find the corresponding byte first,
   //     then find a corresponding bit inside that byte.
   //  2) Actual data is a concatenation of values of the attributes.
   //  3) For Int and Real: use 4 bytes to store the value;
@@ -135,8 +143,8 @@ public:
   RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
 
   RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
-  
-  // This method will be mainly used for debugging/testing. 
+
+  // This method will be mainly used for debugging/testing.
   // The format is as follows:
   // field1-name: field1-value  field2-name: field2-value ... \n
   // (e.g., age: 24  height: 6.1  salary: 9000
@@ -153,7 +161,7 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
 
   RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string &attributeName, void *data);
 
-  // Scan returns an iterator to allow the caller to go through the results one by one. 
+  // Scan returns an iterator to allow the caller to go through the results one by one.
   RC scan(FileHandle &fileHandle,
       const vector<Attribute> &recordDescriptor,
       const string &conditionAttribute,
