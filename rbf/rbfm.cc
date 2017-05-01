@@ -110,6 +110,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     SlotDirectoryRecordEntry newRecordEntry;
     newRecordEntry.length = recordSize;
     newRecordEntry.offset = slotHeader.freeSpaceOffset - recordSize;
+    newRecordEntry.statFlag = alive;                                   //freshly inserted so alive
     setSlotDirectoryRecordEntry(pageData, rid.slotNum, newRecordEntry);
 
     // Updating the slot directory header.
@@ -224,13 +225,39 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid){
   cout<< "delete record called\n";
+
   cout<< "page, slot "<< rid.pageNum<< " "<< rid.slotNum<<endl;
-//get begining of record
+  void * pageData = malloc(PAGE_SIZE);                //where we will extract page
+  cout<< "page num: "<< rid.pageNum<<endl;
+  fileHandle.readPage(rid.pageNum, pageData);        //extracting page
+  SlotDirectoryHeader  tempHeader = getSlotDirectoryHeader(pageData);     //get page slot directory
+  cout<< "slot num: " << rid.slotNum<<endl;
+  SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData, rid.slotNum);    //get record entry
+  switch(tempRecordEntry.statFlag){
+    case dead:
+      cout<< "case dead\n";
+      break;
+    case alive:
+      cout<< "case alive\n";
+      tempRecordEntry.statFlag = dead;    //dead
+
+      break;
+    case moved:
+      cout<< "case moved\n";
+  }
+
+
+  free(pageData);
+// get begining of record
 //  void * data;
 //  readRecord()
 //  unsigned size getRecordSize(recordDescriptor,)//get size of record
   //get the end of record
 
+  return -1;
+}
+
+RC RecordBasedFileManager::compaction(){
   return -1;
 }
 

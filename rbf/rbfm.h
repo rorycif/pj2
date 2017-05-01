@@ -58,7 +58,7 @@ typedef enum{     //used to check when deleting or updating
   dead =0,
   alive,
   moved,
-} statusFlag;
+} Status;
 
 // Slot directory headers for page organization
 // See chapter 9.6.2 of the cow book or lecture 3 slide 16 for more information
@@ -75,6 +75,7 @@ typedef struct SlotDirectoryRecordEntry
 {
     uint32_t length;
     int32_t offset;
+    Status statFlag;
     RID forwardAddress;                  //used if moved
 } SlotDirectoryRecordEntry;
 
@@ -198,6 +199,8 @@ private:
 
   void setRecordAtOffset(void *page, unsigned offset, const vector<Attribute> &recordDescriptor, const void *data);
   void getRecordAtOffset(void *record, unsigned offset, const vector<Attribute> &recordDescriptor, void *data);
+
+  RC compaction();
 };
 
 #endif
