@@ -202,7 +202,7 @@ private:
   void setRecordAtOffset(void *page, unsigned offset, const vector<Attribute> &recordDescriptor, const void *data);
   void getRecordAtOffset(void *record, unsigned offset, const vector<Attribute> &recordDescriptor, void *data);
 
-//  RC compaction(FileHandle fileHandle, void * page, SlotDirectoryRecordEntry recordEntry, SlotDirectoryHeader header, unsigned slotNum, unsigned pageNum);
+    void compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum);
 };
 
 #endif
