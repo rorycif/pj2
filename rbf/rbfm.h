@@ -21,7 +21,9 @@
 #define RBFM_READ_FAILED   5
 #define RBFM_WRITE_FAILED  6
 #define RBFM_SLOT_DN_EXIST 7
-#define RBFM_NOTHING_TO_DELETE 8
+#define RBFM_PAGE_DN_EXIST 8
+#define RBFM_NOTHING_TO_DELETE 9
+#define RBFM_CANT_UPDATE 10
 
 using namespace std;
 
@@ -202,7 +204,7 @@ private:
   void setRecordAtOffset(void *page, unsigned offset, const vector<Attribute> &recordDescriptor, const void *data);
   void getRecordAtOffset(void *record, unsigned offset, const vector<Attribute> &recordDescriptor, void *data);
 
-    void compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum);
+  void compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum);
 };
 
 #endif

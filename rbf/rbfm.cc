@@ -223,9 +223,14 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 }
 
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid){
+    if (fileHandle.getNumberOfPages() < rid.pageNum){       //correct page error check
+        return RBFM_PAGE_DN_EXIST;
+    }
     void * pageData = malloc(PAGE_SIZE);                //where we will extract page
     fileHandle.readPage(rid.pageNum, pageData);        //extracting page
     SlotDirectoryHeader  tempHeader = getSlotDirectoryHeader(pageData);     //get page slot directory
+    if (rid.slotNum > tempHeader.recordEntriesNumber)       //slot error check
+        return RBFM_SLOT_DN_EXIST;
     SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData, rid.slotNum);    //get record entry
     switch(tempRecordEntry.statFlag){
         case dead:
@@ -234,15 +239,41 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
             break;
         case alive:
             compaction(pageData, tempHeader, tempRecordEntry, tempRecordEntry.length, rid.slotNum);     //remove from page
-            fileHandle.writePage(rid.pageNum,pageData);
+            fileHandle.writePage(rid.pageNum,pageData);                                                 //write page
             free(pageData);
             return 0;
             break;
         case moved:
-            deleteRecord(fileHandle,recordDescriptor,tempRecordEntry.forwardAddress);  //recursive call
             free(pageData);
-            return 0;
+            return deleteRecord(fileHandle,recordDescriptor,tempRecordEntry.forwardAddress);  //recursive call
     }
+}
+
+RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid){
+    if (fileHandle.getNumberOfPages() < rid.pageNum){       //correct page error check
+        return RBFM_PAGE_DN_EXIST;
+    }
+    void * pageData = malloc(PAGE_SIZE);                //where we will extract page
+    fileHandle.readPage(rid.pageNum, pageData);        //extracting page
+    SlotDirectoryHeader  tempHeader = getSlotDirectoryHeader(pageData);     //get page slot directory
+    if (rid.slotNum > tempHeader.recordEntriesNumber)       //slot error check
+        return RBFM_SLOT_DN_EXIST;
+    SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData, rid.slotNum);    //get record entry
+    switch (tempRecordEntry.statFlag) {
+        case dead:
+            free(pageData);
+            return RBFM_CANT_UPDATE;
+            break;
+            
+        case moved:
+            free(pageData);
+            return updateRecord(fileHandle,recordDescriptor,data,tempRecordEntry.forwardAddress);
+            break;
+        case alive:
+            cout<< "alive\n";
+            break;
+    }
+    return -1;
 }
 
 void RecordBasedFileManager::compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum){
