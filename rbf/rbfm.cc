@@ -73,7 +73,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 {
     // Gets the size of the record.
     unsigned recordSize = getRecordSize(recordDescriptor, data);
-
     // Cycles through pages looking for enough free space for the new entry.
     void *pageData = malloc(PAGE_SIZE);
     if (pageData == NULL)
@@ -225,25 +224,29 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid){
   cout<< "delete record called\n";
-
   cout<< "page, slot "<< rid.pageNum<< " "<< rid.slotNum<<endl;
   void * pageData = malloc(PAGE_SIZE);                //where we will extract page
   cout<< "page num: "<< rid.pageNum<<endl;
   fileHandle.readPage(rid.pageNum, pageData);        //extracting page
   SlotDirectoryHeader  tempHeader = getSlotDirectoryHeader(pageData);     //get page slot directory
-  cout<< "slot num: " << rid.slotNum<<endl;
+  cout<< "slot num: " << rid.slotNum<<" out of: "<< tempHeader.recordEntriesNumber -1 << endl;
   SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData, rid.slotNum);    //get record entry
   switch(tempRecordEntry.statFlag){
     case dead:
       cout<< "case dead\n";
+      return RBFM_NOTHING_TO_DELETE;               //nothing to delete
       break;
     case alive:
       cout<< "case alive\n";
-      tempRecordEntry.statFlag = dead;    //dead
+      cout<< "record entry length: "<< tempRecordEntry.length<<endl;
 
+      tempRecordEntry.statFlag = dead;    //marked dead
+//      compaction(fileHandle, pageData, tempRecordEntry, tempHeader, rid.slotNum, rid.pageNum);               //compress space on page
+      return 0;
       break;
     case moved:
       cout<< "case moved\n";
+      deleteRecord(fileHandle,recordDescriptor,tempRecordEntry.forwardAddress);  //recursive call
   }
 
 
@@ -257,9 +260,28 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
   return -1;
 }
 
-RC RecordBasedFileManager::compaction(){
-  return -1;
-}
+/*RC RecordBasedFileManager::compaction(FileHandle fileHandle, void * page, SlotDirectoryRecordEntry recordEntry, SlotDirectoryHeader header, unsigned slotNum, unsigned pageNum){
+  unsigned oldLength = 0;       //new length
+  unsigned begin = 0;
+  unsigned end =0;
+  void * pageTemp = page;
+  recordEntry.length = 0;       //only the compacted entry is minimized
+  for (unsigned i = slotNum; i < header.recordEntriesNumber; i++){
+    cout<< "is moving this element: "<< i<< " of length "<< recordEntry.length<< endl;
+    begin = recordEntry.offset - oldLength;
+    end = recordEntry.offset + recordEntry.length - oldLength;
+    cout<< "from end: "<< end<< " to start: "<< begin<<endl;
+    memmove(page + begin, page + end, PAGE_SIZE - end - sizeof(SlotDirectoryHeader) - (sizeof(SlotDirectoryRecordEntry) * header.recordEntriesNumber));
+    recordEntry.offset -= oldLength;                      //set new offset
+    setSlotDirectoryRecordEntry(page,i, recordEntry);     //update recordEntry
+    oldLength = recordEntry.length;                       //prepare old length for next slot
+    if (i > header.recordEntriesNumber -1)
+      recordEntry = getSlotDirectoryRecordEntry(pageTemp, i + 1);
+  }
+  setSlotDirectoryHeader(page, header);             //udate header in page
+  fileHandle.writePage(pageNum, page);
+  return 0;
+}*/
 
 // Private helper methods
 

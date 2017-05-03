@@ -2,6 +2,7 @@
 #define _rbfm_h_
 
 #include <string>
+#include <stdio.h>
 #include <vector>
 #include <climits>
 
@@ -20,6 +21,7 @@
 #define RBFM_READ_FAILED   5
 #define RBFM_WRITE_FAILED  6
 #define RBFM_SLOT_DN_EXIST 7
+#define RBFM_NOTHING_TO_DELETE 8
 
 using namespace std;
 
@@ -200,7 +202,7 @@ private:
   void setRecordAtOffset(void *page, unsigned offset, const vector<Attribute> &recordDescriptor, const void *data);
   void getRecordAtOffset(void *record, unsigned offset, const vector<Attribute> &recordDescriptor, void *data);
 
-  RC compaction();
+//  RC compaction(FileHandle fileHandle, void * page, SlotDirectoryRecordEntry recordEntry, SlotDirectoryHeader header, unsigned slotNum, unsigned pageNum);
 };
 
 #endif
