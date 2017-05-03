@@ -234,6 +234,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
             break;
         case alive:
             compaction(pageData, tempHeader, tempRecordEntry, tempRecordEntry.length, rid.slotNum);     //remove from page
+            fileHandle.writePage(rid.pageNum,pageData);
             free(pageData);
             return 0;
             break;
