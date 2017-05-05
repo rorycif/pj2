@@ -271,6 +271,25 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
             break;
         case alive:
             cout<< "alive\n";
+            unsigned size = getRecordSize(recordDescriptor, data);
+            if (size == tempRecordEntry.length){
+                cout<< "same length just update\n";
+                setRecordAtOffset(pageData, tempRecordEntry.offset, recordDescriptor, data);
+            }
+            else if(size > tempRecordEntry.length){     //smaller size so compact
+                cout<< "smaller so compact\n";
+                setRecordAtOffset(pageData, tempRecordEntry.offset, recordDescriptor, data);
+                compaction(pageData, tempHeader, tempRecordEntry, tempRecordEntry.length - size, rid.slotNum);
+                fileHandle.writePage(rid.pageNum, pageData);
+                free(pageData);
+                return 0;
+            }
+            else{       //record is now bigger
+                //erase
+                //insert to new spot
+                //
+            
+            }
             break;
     }
     return -1;
