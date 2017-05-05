@@ -241,12 +241,14 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
             compaction(pageData, tempHeader, tempRecordEntry, tempRecordEntry.length, rid.slotNum);     //remove from page
             fileHandle.writePage(rid.pageNum,pageData);                                                 //write page
             free(pageData);
-            return 0;
+            return SUCCESS;
             break;
         case moved:
             free(pageData);
             return deleteRecord(fileHandle,recordDescriptor,tempRecordEntry.forwardAddress);  //recursive call
+            break;
     }
+    return RBFM_DELETE_ERROR;    //should not get here but gets rid of compile warning
 }
 
 RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid){
@@ -264,7 +266,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
             free(pageData);
             return RBFM_CANT_UPDATE;
             break;
-            
+
         case moved:
             free(pageData);
             return updateRecord(fileHandle,recordDescriptor,data,tempRecordEntry.forwardAddress);
@@ -282,17 +284,38 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
                 compaction(pageData, tempHeader, tempRecordEntry, tempRecordEntry.length - size, rid.slotNum);
                 fileHandle.writePage(rid.pageNum, pageData);
                 free(pageData);
-                return 0;
+                return SUCCESS;
             }
             else{       //record is now bigger
-                //erase
-                //insert to new spot
-                //
-            
+                deleteRecord(fileHandle,recordDescriptor, rid);     //clear space
+                tempRecordEntry.statFlag = moved;
+                if (insertRecord(fileHandle, recordDescriptor, data, tempRecordEntry.forwardAddress)){
+                  free(pageData);
+                  return RBFM_UPDATE_FAIL;
+                }
+                setSlotDirectoryRecordEntry(pageData, rid.slotNum, tempRecordEntry);    //update forwardAddress
+                free(pageData);
+                return SUCCESS;
             }
             break;
     }
-    return -1;
+    return RBFM_CANT_UPDATE;    //should not make it here but to remove compiler warning
+}
+
+unsigned RecordBasedFileManager::getAvailablePage(unsigned size, FileHandle &fileHandle){
+  void* tempPage = malloc(PAGE_SIZE);           //temppage that we will fetch
+  SlotDirectoryHeader tempHeader;
+  for (unsigned i =0; i < fileHandle.getNumberOfPages(); i ++){
+    fileHandle.readPage(i, tempPage);
+    tempHeader = getSlotDirectoryHeader(tempPage);
+    if (PAGE_SIZE -tempHeader.freeSpaceOffset - sizeof(SlotDirectoryRecordEntry)){
+      //there is enough space to suport the insert and a new SlotDirectoryRecordEntry
+      free (tempPage);
+      return i;
+    }
+  }
+  free (tempPage);
+  return fileHandle.getNumberOfPages();    //a new page must be made to support
 }
 
 void RecordBasedFileManager::compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum){
@@ -302,7 +325,7 @@ void RecordBasedFileManager::compaction(void * pageData, SlotDirectoryHeader tem
     tempHeader.freeSpaceOffset -= shorten;         //update page free space
     setSlotDirectoryHeader(pageData,tempHeader);                                  //commit header
     setSlotDirectoryRecordEntry(pageData, slotNum, tempRecordEntry);      //commit dead slot
-    if (slotNum != tempHeader.recordEntriesNumber - 1){
+    if (slotNum != (unsigned)(tempHeader.recordEntriesNumber - 1)){
         for (unsigned i = slotNum + 1; i < tempHeader.recordEntriesNumber; i ++){         //used for updating the offsets of following slots
             tempRecordEntry = getSlotDirectoryRecordEntry(pageData,i);
             tempRecordEntry.offset -= shorten;
