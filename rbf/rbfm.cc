@@ -335,7 +335,81 @@ void RecordBasedFileManager::compaction(void * pageData, SlotDirectoryHeader tem
     }
 }
 
+RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string &attributeName, void *data){
+  //page validation
+  if (rid.pageNum >= fileHandle.getNumberOfPages())
+    return RBFM_PAGE_DN_EXIST;
+  void * pageData = malloc(PAGE_SIZE);
+
+  //slot validation
+  SlotDirectoryHeader tempHeader = getSlotDirectoryHeader(pageData);
+  if (rid.slotNum >= tempHeader.recordEntriesNumber){
+    free(pageData);
+    return RBFM_SLOT_DN_EXIST;
+  }
+  SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData,rid.slotNum);
+
+  //validate that attribute exist
+  bool found = false;
+  AttrType targetType;
+  for (unsigned i =0; i< recordDescriptor.size(); i++){
+    if (recordDescriptor[i].name == attributeName){
+      targetType = recordDescriptor[i].type;
+      found = true;
+    }
+  }
+  if (!found){
+    free(pageData);
+    return RBFM_ATTRIBUTE_DN_EXIST;
+  }
+
+  //get record
+  void * record = malloc(tempRecordEntry.length);       //where entire record is fetched to
+  getRecordAtOffset(pageData, tempRecordEntry.offset, recordDescriptor, record);
+  unsigned start = getAttributeOffset(record, recordDescriptor, attributeName); //where attribute begins
+  record += start;
+  switch (targetType) {
+    case TypeReal:
+      {
+      float * fcast = (float*)record;
+      float resultReal = fcast[0];
+      memcpy(data,&resultReal, REAL_SIZE);      //set real attibute
+      break;
+    }
+    case TypeInt:
+      {
+      int * icast = (int*)record;
+      int  resultInt = icast[0];
+      memcpy(data,&resultInt, INT_SIZE);
+      break;
+    }
+    case TypeVarChar:
+      {
+      int * scast = (int*)record;
+      int varSize = scast[0]; //size of string
+      record += INT_SIZE;
+      char * vcCast = (char*)record;
+      string result = "";     //string for total varchar
+      for (int i =0; i < varSize; i++){
+        result += vcCast[0];                //concatinate result
+        vcCast += VARCHAR_LENGTH_SIZE;      //move to next character
+      }
+      memcpy(data, &result, varSize);
+      break;
+    }
+  }
+  free(record);
+  free(pageData);
+  return -1;
+}
+
 // Private helper methods
+
+//returns where the wanted attribute starts
+unsigned RecordBasedFileManager::getAttributeOffset(void * record, const vector<Attribute> &recordDescriptor, const string &attributeName){
+  cout<< "attribute offset function needs implementing\n";
+  return -1;
+}
 
 // Configures a new record based page, and puts it in "page".
 void RecordBasedFileManager::newRecordBasedPage(void * page)

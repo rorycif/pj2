@@ -26,6 +26,7 @@
 #define RBFM_CANT_UPDATE 10
 #define RBFM_DELETE_ERROR 11
 #define RBFM_UPDATE_FAIL 12
+#define RBFM_ATTRIBUTE_DN_EXIST 13
 
 using namespace std;
 
@@ -204,10 +205,11 @@ private:
   bool fieldIsNull(char *nullIndicator, int i);
 
   void setRecordAtOffset(void *page, unsigned offset, const vector<Attribute> &recordDescriptor, const void *data);
-  void getRecordAtOffset(void *record, unsigned offset, const vector<Attribute> &recordDescriptor, void *data);
+  void getRecordAtOffset(void *page, unsigned offset, const vector<Attribute> &recordDescriptor, void *data);
 
   unsigned getAvailablePage(unsigned size, FileHandle &fileHandle);     //retuns the next availble page to take that size
   void compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum);
+  unsigned getAttributeOffset(void * record, const vector<Attribute> &recordDescriptor, const string &attributeName);
 };
 
 #endif
