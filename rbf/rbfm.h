@@ -28,6 +28,7 @@
 #define RBFM_DELETE_ERROR 11
 #define RBFM_UPDATE_FAIL 12
 #define RBFM_ATTRIBUTE_DN_EXIST 13
+#define RBFM_EMPTY_SCAN 14
 
 using namespace std;
 

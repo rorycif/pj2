@@ -302,6 +302,41 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     return RBFM_CANT_UPDATE;    //should not make it here but to remove compiler warning
 }
 
+RC RecordBasedFileManager::scan(FileHandle &fileHandle,
+    const vector<Attribute> &recordDescriptor,
+    const string &conditionAttribute,
+    const CompOp compOp,                  // comparision type such as "<" and "="
+    const void *value,                    // used in the comparison
+    const vector<string> &attributeNames, // a list of projected attributes
+    RBFM_ScanIterator &rbfm_ScanIterator){
+      //get page count
+      unsigned pageCount = fileHandle.getNumberOfPages();
+      void * currentPage;
+      SlotDirectoryHeader tempHeader;
+      SlotDirectoryRecordEntry tempRecordEntry;
+      //validation
+      if (!pageCount)
+        return RBFM_EMPTY_SCAN;
+      //iterate though pages
+        for (unsigned i =0; i < pageCount; i++){
+          cout<<"scaning page "<<i<<endl;
+          currentPage = malloc(PAGE_SIZE);
+          fileHandle.readPage(i,currentPage);
+          tempHeader = getSlotDirectoryHeader(currentPage);
+          for (unsigned i =0; i < tempHeader.recordEntriesNumber; i ++){
+            cout<< "iterating through records\n";
+          }
+          free(currentPage);
+          cout<< "moving on to next page\n";
+        }
+        //get record count
+        //iterate though records
+        //record check
+          //if matches comparison add to data
+      return -1;
+    }
+
+//helper function when a new page with enough space is needed
 unsigned RecordBasedFileManager::getAvailablePage(unsigned size, FileHandle &fileHandle){
   void* tempPage = malloc(PAGE_SIZE);           //temppage that we will fetch
   SlotDirectoryHeader tempHeader;
