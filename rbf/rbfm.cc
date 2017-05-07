@@ -407,7 +407,46 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 
 //returns where the wanted attribute starts
 unsigned RecordBasedFileManager::getAttributeOffset(void * record, const vector<Attribute> &recordDescriptor, const string &attributeName){
-  cout<< "attribute offset function needs implementing\n";
+  cout<< "attibute helper function called\n";
+  unsigned count =0;
+  char * temp = (char *)record;                       //to keep data pointer unchanged
+  char * temp2 = (char*)record;
+  int nullBytes = getNullIndicatorSize(recordDescriptor.size());
+  count += nullBytes;             //add bytes to running sum
+  temp += nullBytes;
+  int varSize = 0;                //for varchar sizes
+  int * intTemp;                  //used to cast data stream to int
+  for (unsigned i =0; i < recordDescriptor.size(); i ++){
+      if(!fieldIsNull(temp2, i)){
+        if (recordDescriptor[i].name == attributeName)      //return where attribute starts
+          return count;
+        switch (recordDescriptor[i].type){
+          case TypeInt:     //move over int attribute
+          {
+            count += INT_SIZE;
+            temp += INT_SIZE;
+            break;
+          }
+          case TypeReal:    //move over real attribute
+          {
+            count += REAL_SIZE;
+            temp += REAL_SIZE;
+            break;
+          }
+          case TypeVarChar:   //move over varchar attribute
+          {
+            intTemp = (int *)temp;
+            varSize = intTemp[0];
+            count += varSize;
+            temp += varSize;
+            break;
+          }
+        }
+      }
+      return RBFM_ATTRIBUTE_OFFSET_FAILURE;
+  }
+
+
   return -1;
 }
 
