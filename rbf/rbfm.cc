@@ -309,31 +309,55 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
     const void *value,                    // used in the comparison
     const vector<string> &attributeNames, // a list of projected attributes
     RBFM_ScanIterator &rbfm_ScanIterator){
-      //get page count
+      //validations
       unsigned pageCount = fileHandle.getNumberOfPages();
-      void * currentPage;
-      SlotDirectoryHeader tempHeader;
-      string outputFileName = rbfm_ScanIterator.getFileName(value, conditionAttribute, compOp, attributeNames, recordDescriptor);
-      SlotDirectoryRecordEntry tempRecordEntry;
-      //validation
-      if (!pageCount)
+      if (!pageCount || !recordDescriptor.size() || attributeNames.size() > recordDescriptor.size())
         return RBFM_EMPTY_SCAN;
-      //iterate though pages
-        for (unsigned i =0; i < pageCount; i++){
-          cout<<"scaning page "<<i<<endl;
-          currentPage = malloc(PAGE_SIZE);
-          fileHandle.readPage(i,currentPage);
-          tempHeader = getSlotDirectoryHeader(currentPage);
-          for (unsigned i =0; i < tempHeader.recordEntriesNumber; i ++){
-            cout<< "iterating through records\n";
-          }
-          free(currentPage);
-          cout<< "moving on to next page\n";
+      AttrType targetType;
+      bool isInVector = false;                      //used to find if the condition name exist in record descriptor vector
+      for (unsigned i =0; i < recordDescriptor.size(); i++){
+        if (recordDescriptor[i].name == conditionAttribute){
+          cout<< "type determind\n";
+          targetType = recordDescriptor[i].type;
+          isInVector = true;
         }
-        //get record count
-        //iterate though records
-        //record check
-          //if matches comparison add to data
+      }
+      if (!isInVector)
+        return RBFM_ATTRIBUTE_DN_EXIST;
+
+      //make file for scan iterator
+      string fileName = rbfm_ScanIterator.getFileName(value, conditionAttribute, compOp, attributeNames,targetType);
+      FILE * pFile = fopen(fileName.c_str(), "wb");
+
+      //iterate though pages
+      void * currentPage;
+      void * currentRecord;
+      SlotDirectoryHeader tempHeader;
+      SlotDirectoryRecordEntry tempRecordEntry;
+      for (unsigned i =0; i < pageCount; i++){
+        cout<<"scaning page "<<i<<endl;
+        currentPage = malloc(PAGE_SIZE);
+        fileHandle.readPage(i,currentPage);
+        tempHeader = getSlotDirectoryHeader(currentPage);
+        //iterate though each record on page
+        for (unsigned i =0; i < tempHeader.recordEntriesNumber; i ++){
+          cout<< "iterating through record "<< i<<endl;
+          tempRecordEntry = getSlotDirectoryRecordEntry(currentPage,i);
+          currentRecord = malloc(tempRecordEntry.length);
+          getRecordAtOffset(currentPage, tempRecordEntry.offset, recordDescriptor, currentRecord);
+          //compare the record for condition
+          if (compareAttributes(currentRecord, value, targetType, conditionAttribute, recordDescriptor, compOp)){
+            addAttributesToFile(pFile, currentRecord, attributeNames);  //meets critera add to iterater file
+          }
+          free (currentRecord);
+        }
+        free(currentPage);
+        cout<< "moving on to next page\n";
+      }
+      //get record count
+      //iterate though records
+      //record check
+      //if matches comparison add to data
       return -1;
     }
 
@@ -726,56 +750,66 @@ void RecordBasedFileManager::getRecordAtOffset(void *page, unsigned offset, cons
 }
 
 //gives each scan file a unique name
-string RBFM_ScanIterator::getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, vector<Attribute> recordDescriptor){
+string RBFM_ScanIterator::getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, AttrType type){
   cout<< "making output name \n";
   string name = "";
   name += conditionAttribute;
   switch (compOp) {
     case EQ_OP:
-      name += " =";
+      name += " = ";
       break;
     case LT_OP:
-      name += " <";
+      name += " < ";
       break;
     case LE_OP:
-      name += " <=";
+      name += " <= ";
       break;
     case GT_OP:
-      name += " >";
+      name += " > ";
       break;
     case GE_OP:
-      name += " >=";
+      name += " >= ";
       break;
     case NE_OP:
-      name += " !=";
+      name += " != ";
       break;
     case NO_OP:
-      name += " noOp";
+      name += " noOp ";
       break;
   }
-  for (unsigned i =0; i < recordDescriptor.size(); i ++){   //finds the right attibute
-    if (conditionAttribute == recordDescriptor[i].name){    //adds value being compared to name
-      switch (recordDescriptor[i].type) {
-        case TypeInt:
-        {
-          int * tempint = (int *)value;
-          name += to_string(tempint[0]);
-          break;
-        }
-        case TypeReal:
-        {
-          float * tempfloat = (float *)value;
-          name += to_string(tempfloat[0]);
-          break;
-        }
-        case TypeVarChar:
-        {
-          char * tempChar = (char *)value;
-          name += tempChar;
-          break;
-        }
+    switch (type) {
+      case TypeInt:
+      {
+        int * tempint = (int *)value;
+        name += to_string(tempint[0]);
+        break;
+      }
+      case TypeReal:
+      {
+        float * tempfloat = (float *)value;
+        name += to_string(tempfloat[0]);
+        break;
+      }
+      case TypeVarChar:
+      {
+        char * tempChar = (char *)value;
+        name += tempChar;
+        break;
       }
     }
-  }
+    for (unsigned i = 0; i < attributeNames.size(); i ++){  //output names
+      name += " ";
+      name += attributeNames[i];
+    }
   return name;
+}
+
+//if a record meets the critera this will return true
+bool RecordBasedFileManager::compareAttributes(const void * record,const void * value, AttrType type, string conditionAttribute, vector<Attribute> recordDescriptor, CompOp compOp){
+  return false;
+}
+
+//used to append parts record to a file
+void RecordBasedFileManager::addAttributesToFile(FILE * file,const void * record, vector<string> attributeNames){
+
 }

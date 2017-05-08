@@ -115,7 +115,7 @@ public:
   RBFM_ScanIterator() {};
   ~RBFM_ScanIterator() {};
 
-  string getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, vector<Attribute> recordDescriptor);
+  string getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, AttrType type);
   // Never keep the results in the memory. When getNextRecord() is called,
   // a satisfying record needs to be fetched from the file.
   // "data" follows the same format as RecordBasedFileManager::insertRecord().
@@ -213,6 +213,8 @@ private:
   unsigned getAvailablePage(unsigned size, FileHandle &fileHandle);     //retuns the next availble page to take that size
   void compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum);
   unsigned getAttributeOffset(void * record, const vector<Attribute> &recordDescriptor, const string &attributeName);
+  bool compareAttributes(const void * record, const void * value, AttrType type, string conditionAttribute, vector<Attribute> recordDescriptor, CompOp compOp);
+  void addAttributesToFile(FILE * file, const void * record, vector<string> attributeNames);
 };
 
 #endif
