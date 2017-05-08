@@ -115,6 +115,7 @@ public:
   RBFM_ScanIterator() {};
   ~RBFM_ScanIterator() {};
 
+  string getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, vector<Attribute> recordDescriptor);
   // Never keep the results in the memory. When getNextRecord() is called,
   // a satisfying record needs to be fetched from the file.
   // "data" follows the same format as RecordBasedFileManager::insertRecord().

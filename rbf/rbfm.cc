@@ -313,6 +313,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
       unsigned pageCount = fileHandle.getNumberOfPages();
       void * currentPage;
       SlotDirectoryHeader tempHeader;
+      string outputFileName = rbfm_ScanIterator.getFileName(value, conditionAttribute, compOp, attributeNames, recordDescriptor);
       SlotDirectoryRecordEntry tempRecordEntry;
       //validation
       if (!pageCount)
@@ -722,4 +723,59 @@ void RecordBasedFileManager::getRecordAtOffset(void *page, unsigned offset, cons
         rec_offset += fieldSize;
         data_offset += fieldSize;
     }
+}
+
+//gives each scan file a unique name
+string RBFM_ScanIterator::getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, vector<Attribute> recordDescriptor){
+  cout<< "making output name \n";
+  string name = "";
+  name += conditionAttribute;
+  switch (compOp) {
+    case EQ_OP:
+      name += " =";
+      break;
+    case LT_OP:
+      name += " <";
+      break;
+    case LE_OP:
+      name += " <=";
+      break;
+    case GT_OP:
+      name += " >";
+      break;
+    case GE_OP:
+      name += " >=";
+      break;
+    case NE_OP:
+      name += " !=";
+      break;
+    case NO_OP:
+      name += " noOp";
+      break;
+  }
+  for (unsigned i =0; i < recordDescriptor.size(); i ++){   //finds the right attibute
+    if (conditionAttribute == recordDescriptor[i].name){    //adds value being compared to name
+      switch (recordDescriptor[i].type) {
+        case TypeInt:
+        {
+          int * tempint = (int *)value;
+          name += to_string(tempint[0]);
+          break;
+        }
+        case TypeReal:
+        {
+          float * tempfloat = (float *)value;
+          name += to_string(tempfloat[0]);
+          break;
+        }
+        case TypeVarChar:
+        {
+          char * tempChar = (char *)value;
+          name += tempChar;
+          break;
+        }
+      }
+    }
+  }
+  return name;
 }
