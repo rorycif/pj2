@@ -212,9 +212,12 @@ private:
 
   unsigned getAvailablePage(unsigned size, FileHandle &fileHandle);     //retuns the next availble page to take that size
   void compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum);
-  unsigned getAttributeOffset(void * record, const vector<Attribute> &recordDescriptor, const string &attributeName);
+  unsigned getAttributeOffset(const void * record, const vector<Attribute> &recordDescriptor, const string &attributeName);
   bool compareAttributes(const void * record, const void * value, AttrType type, string conditionAttribute, vector<Attribute> recordDescriptor, CompOp compOp);
   void addAttributesToFile(FILE * file, const void * record, vector<string> attributeNames);
+  bool compareCheckInt(int val1, CompOp compOp, int val2);
+  bool compareCheckFloat(float val1, CompOp compOp, float val2);
+  bool compareCheckVarChar(string val1, CompOp compOp, string val2);
 };
 
 #endif

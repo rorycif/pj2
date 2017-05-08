@@ -466,7 +466,7 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 // Private helper methods
 
 //returns where the wanted attribute starts
-unsigned RecordBasedFileManager::getAttributeOffset(void * record, const vector<Attribute> &recordDescriptor, const string &attributeName){
+unsigned RecordBasedFileManager::getAttributeOffset(const void * record, const vector<Attribute> &recordDescriptor, const string &attributeName){
   cout<< "attibute helper function called\n";
   unsigned count =0;
   char * temp = (char *)record;                       //to keep data pointer unchanged
@@ -805,10 +805,167 @@ string RBFM_ScanIterator::getFileName(const void * value, string conditionAttrib
 }
 
 //if a record meets the critera this will return true
-bool RecordBasedFileManager::compareAttributes(const void * record,const void * value, AttrType type, string conditionAttribute, vector<Attribute> recordDescriptor, CompOp compOp){
-  return false;
+bool RecordBasedFileManager::compareAttributes(const void * record, const void * value, AttrType type, string conditionAttribute, vector<Attribute> recordDescriptor, CompOp compOp){
+  //get attribute location
+  cout<< "comparing attributes\n";
+  unsigned start = getAttributeOffset(record, recordDescriptor, conditionAttribute);
+  char * recordCast = (char*)record;              //avoid compiler errors
+  //cast to valid type
+  switch (type) {
+    case TypeInt:       //comparing intergers
+    {
+      recordCast += start;
+      int * tempInt = (int*)recordCast;       //first operand
+      int * tempInt2 = (int*)value;           //second opperand
+      return compareCheckInt(tempInt[0], compOp, tempInt2[0]);
+      break;
+    }
+    case TypeReal:      //comparing real numbers
+    {
+      recordCast += start;
+      float * tempFloat = (float*)recordCast;       //first operand
+      float * tempFloat2 = (float*)value;           //second opperand
+      return compareCheckFloat(tempFloat[0], compOp, tempFloat2[0]);
+      break;
+    }
+    case TypeVarChar:   //comparing strings
+    {
+      recordCast += start;
+      int * size = (int *)recordCast;
+      recordCast += INT_SIZE;
+      string tempString = "";
+      tempString += recordCast;
+      string tempString2 = (char*)value;
+      return compareCheckVarChar(tempString, compOp, tempString2);
+      break;
+    }
+  }
+  //return comparison truth value
+  return false;       //should not get here ideally
 }
-
+//helper function for comaring intergers
+bool RecordBasedFileManager::compareCheckInt(int val1, CompOp compOp, int val2){
+  switch (compOp) {
+    case EQ_OP:   //equals
+    {
+      return val1 == val2;
+      break;
+    }
+    case LT_OP:   //less than
+    {
+      return val1 < val2;
+      break;
+    }
+    case LE_OP:   //less than or equal to
+    {
+      return val1 <= val2;
+      break;
+    }
+    case GT_OP:   //greater than
+    {
+      return val1 > val2;
+      break;
+    }
+    case GE_OP:   //greater than or equal to
+    {
+      return val1 >= val2;
+      break;
+    }
+    case NE_OP:   //not equal to
+    {
+      return val1 != val2;
+      break;
+    }
+    case NO_OP:   //no operation
+    {
+      return true;
+      break;
+    }
+  }
+  return false; //should not reach here
+}
+//helperfunction for comparing floats
+bool RecordBasedFileManager::compareCheckFloat(float val1, CompOp compOp, float val2){
+  switch (compOp) {
+    case EQ_OP:   //equals
+    {
+      return val1 == val2;
+      break;
+    }
+    case LT_OP:   //less than
+    {
+      return val1 < val2;
+      break;
+    }
+    case LE_OP:   //less than or equal to
+    {
+      return val1 <= val2;
+      break;
+    }
+    case GT_OP:   //greater than
+    {
+      return val1 > val2;
+      break;
+    }
+    case GE_OP:   //greater than or equal to
+    {
+      return val1 >= val2;
+      break;
+    }
+    case NE_OP:   //not equal to
+    {
+      return val1 != val2;
+      break;
+    }
+    case NO_OP:   //no operation
+    {
+      return true;
+      break;
+    }
+  }
+  return false; //should not reach here
+}
+//helper function for comparing strings
+bool RecordBasedFileManager::compareCheckVarChar(string val1, CompOp compOp, string val2){
+  switch (compOp) {
+    case EQ_OP:   //equals
+    {
+      return val1 == val2;
+      break;
+    }
+    case LT_OP:   //less than
+    {
+      return val1 < val2;
+      break;
+    }
+    case LE_OP:   //less than or equal to
+    {
+      return val1 <= val2;
+      break;
+    }
+    case GT_OP:   //greater than
+    {
+      return val1 > val2;
+      break;
+    }
+    case GE_OP:   //greater than or equal to
+    {
+      return val1 >= val2;
+      break;
+    }
+    case NE_OP:   //not equal to
+    {
+      return val1 != val2;
+      break;
+    }
+    case NO_OP:   //no operation
+    {
+      return true;
+      break;
+    }
+  }
+  return false; //should not reach here
+}
 //used to append parts record to a file
 void RecordBasedFileManager::addAttributesToFile(FILE * file,const void * record, vector<string> attributeNames){
 
