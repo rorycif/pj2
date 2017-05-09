@@ -16,41 +16,27 @@ using namespace std;
 #define COLUMN_FILE_EXISTS 2
 #define FILE_OPEN_FAILED 3
 
-#define SEEK_FAIL 1
+#define SEEK_FAILED 1
+#define WRITE_FAILED 2
+#define INSERT_FAILED 3
 
 // Catalog Tables
-// Tables
+// Tables Catelog
 typedef struct TablesCatalogHeader {
-  uint32_t nextTableId;                   // id number for the next new table
+  uint32_t nextTableId; // id number for the next new record
   uint32_t numOfTables;
   uint32_t freeSpaceOffset;
-
-  TablesCatalogHeader() {
-    nextTableId = 0;
-    numOfTables = 0;
-    freeSpaceOffset = 0;
-  }
 } TablesCatalogHeader;
 
 typedef struct TablesCatalogEntry {
   uint32_t tableId;
   string tableName;
   string fileName;
-
-  TablesCatalogEntry(uint32_t tableId, string tableName, string fileName) {
-    this->tableId = tableId;
-    this->tableName = tableName;
-    this->fileName = fileName;
-  }
 } TablesCatalogEntry;
 
-// Columns
+// Columns Catelog
 typedef struct ColumnsCatalogHeader {
   uint32_t freeSpaceOffset;
-
-  ColumnsCatalogHeader() {
-    freeSpaceOffset = 0;
-  }
 } ColumnsCatalogHeader;
 
 typedef struct ColumnsCatalogEntry {
@@ -59,16 +45,6 @@ typedef struct ColumnsCatalogEntry {
   AttrType columnType;
   uint32_t columnLength;
   uint32_t columnPosition;
-
-  ColumnsCatalogEntry(uint32_t tableId, string columnName, AttrType columnType, 
-                      uint32_t columnLength, uint32_t columnPosition)
-  {
-    this->tableId = tableId;
-    this->columnName = columnName;
-    this->columnType = columnType;
-    this->columnLength = columnLength;
-    this->columnPosition = columnPosition;
-  }
 } ColumnsCatalogEntry;
 
 // RM_ScanIterator is an iteratr to go through tuples
@@ -139,22 +115,24 @@ private:
   
   // TablesCatalogEntry
   void updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, uint32_t tableId, string tableName, string fileName);
-  void insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry, uint32_t entryId);
+  RC insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry);
   //TablesCatalogEntry getTablesCatalogEntry(void * pTablesFile, uint32_t entryId);
 
   // TablesCatalogHeader
+  void  initializeTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader);
   void updateTablesCatalogHeader(TablesCatalogHeader * tablescatalogHeader);
-  void insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader);
+  RC insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader);
   void getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, void * pTablesFile);
 
   // ColumnsCatalogEntry
   void updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, uint32_t tableId, string columnName, AttrType columnType, uint32_t columnLength, uint32_t columnPosition);
-  void insertColumnsCatalogEntry(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntry, ColumnsCatalogHeader * columnsCatalogHeader);
+  RC insertColumnsCatalogEntry(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntry, ColumnsCatalogHeader * columnsCatalogHeader);
   //TablesCatalogHeader getColumnsCatalogEntry(void * pTablesFile);
 
   // ColumnsCatalogHeader
+  void initializeColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
   void updateColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
-  void insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatalogHeader * columnsCatalogHeader);
+  RC insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatalogHeader * columnsCatalogHeader);
   void getColumnsCatalogHeader(ColumnsCatalogHeader * columnCatalogHeader, void * pColumnsFile);
 };
 

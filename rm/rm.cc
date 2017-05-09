@@ -45,26 +45,36 @@ RC RelationManager::createCatalog()
     if (pTablesFile == NULL || pColumnsFile == NULL) {
         return FILE_OPEN_FAILED;
     }
-    
+
 	// Create the Headers and Entries
-	TablesCatalogHeader * tablesCatalogHeader = new TablesCatalogHeader();
-    ColumnsCatalogHeader * columnsCatalogHeader = new ColumnsCatalogHeader();
+	TablesCatalogHeader tablesCatalogHeader;
+    ColumnsCatalogHeader columnsCatalogHeader;
+    TablesCatalogEntry tablesCatalogEntry;
+    ColumnsCatalogEntry columnsCatalogEntry;
+
+    // initizlize the Headers
+    initializeTablesCatalogHeader(&tablesCatalogHeader);
+    initializeColumnsCatalogHeader(&columnsCatalogHeader);
     
     // Add Table "Tables" to Tables Catalog
-    TablesCatalogEntry * tablesCatalogEntry = new TablesCatalogEntry(0, "Tables", "Tables");
-    insertTablesCatalogEntry(pTablesFile, tablesCatalogEntry, tablesCatalogEntry->tableId);
-	updateTablesCatalogHeader(tablesCatalogHeader);
-    
+    updateTablesCatalogEntry(&tablesCatalogEntry, 0, "Tables", "Tables");
+    if (insertTablesCatalogEntry(pTablesFile, &tablesCatalogEntry))
+        return INSERT_FAILED;
+    updateTablesCatalogHeader(&tablesCatalogHeader);
+
     // Add Table "Columns" to Table Catalog
-	updateTablesCatalogEntry(tablesCatalogEntry, 1, "Columns", "Columns");
-    insertTablesCatalogEntry(pTablesFile, tablesCatalogEntry, tablesCatalogEntry->tableId);
-	updateTablesCatalogHeader(tablesCatalogHeader);
+	updateTablesCatalogEntry(&tablesCatalogEntry, 1, "Columns", "Columns");
+    if (insertTablesCatalogEntry(pTablesFile, &tablesCatalogEntry))
+        return INSERT_FAILED;
+	updateTablesCatalogHeader(&tablesCatalogHeader);
 
     // Add TablesCatalogHeader to the file
-    insertTablesCatalogHeader(pTablesFile, tablesCatalogHeader);
+    if (insertTablesCatalogHeader(pTablesFile, &tablesCatalogHeader))
+        return INSERT_FAILED;
 
+/*
     // Add conlumns info of each table to Columns Catalog
-	ColumnsCatalogEntry * columnsCatalogEntry = new ColumnsCatalogEntry(1, "table-id", TypeInt, 4 , 1);
+    updateColumnsCatalogEntry(columnsCatalogEntry, 0, "Tables", "Tables");
     insertColumnsCatalogEntry(pColumnsFile, columnsCatalogEntry, columnsCatalogHeader);
     updateColumnsCatalogHeader(columnsCatalogHeader);
 
@@ -98,25 +108,17 @@ RC RelationManager::createCatalog()
 
 	// write columnsCatalogHeader to disk
 	insertColumnsCatalogHeader(pColumnsFile, columnsCatalogHeader);
-
+*/
 	// free the pointers
     fclose(pTablesFile);
     fclose(pColumnsFile);
 
-    // TBD
-    FILE * pFile = fopen(tablesCatalogName.c_str(), "wb");
-    fseek(pFile, sizeof(TablesCatalogHeader), SEEK_SET);
-    void * raw = malloc(sizeof(tablesCatalogEntry));
-    fread(raw, sizeof(tablesCatalogEntry), 1, pFile);
-    TablesCatalogEntry * data = (TablesCatalogEntry *) raw;
-    cout << data->fileName << endl;
-	fclose(pFile);
-
+/*
 	delete(tablesCatalogHeader);
 	delete(tablesCatalogEntry);
 	delete(columnsCatalogHeader);
 	delete(columnsCatalogEntry);
-
+*/
     return SUCCESS;
 }
 
@@ -195,11 +197,20 @@ void RelationManager::updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalo
 	tablesCatalogEntry->fileName = fileName;
 }
 
-void RelationManager::insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry, uint32_t entryId) 
+RC RelationManager::insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry) 
 {
-    fseek(pTablesFile, (sizeof(TablesCatalogHeader) + entryId * sizeof(TablesCatalogEntry)), SEEK_SET);
-    fwrite(tablesCatalogEntry, 1, sizeof(TablesCatalogEntry), pTablesFile);
-    fflush(pTablesFile);
+    uint32_t tableId = tablesCatalogEntry->tableId;
+
+    if (fseek(pTablesFile, (sizeof(TablesCatalogHeader) + tableId * sizeof(TablesCatalogEntry)), SEEK_SET))
+        return SEEK_FAILED;
+    
+    if (fwrite(tablesCatalogEntry, sizeof(TablesCatalogEntry), 1, pTablesFile))
+    {
+        fflush(pTablesFile);
+        return SUCCESS;
+    }
+
+    return WRITE_FAILED;
 }
 /*
 TablesCatalogEntry RelationManager::getTablesCatalogEntry(void * pTablesFile, uint32_t entryId) 
@@ -214,6 +225,13 @@ TablesCatalogEntry RelationManager::getTablesCatalogEntry(void * pTablesFile, ui
 }
 */
 
+void  RelationManager::initializeTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader)
+{
+    tablesCatalogHeader->nextTableId = 0;
+    tablesCatalogHeader->numOfTables = 0;
+    tablesCatalogHeader->freeSpaceOffset = sizeof(TablesCatalogHeader);
+}
+
 void RelationManager::updateTablesCatalogHeader(TablesCatalogHeader * tablescatalogHeader)
 {
 	tablescatalogHeader->nextTableId += 1;
@@ -222,11 +240,17 @@ void RelationManager::updateTablesCatalogHeader(TablesCatalogHeader * tablescata
 }
 
 
-void RelationManager::insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader) 
+RC RelationManager::insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader) 
 {
-    fseek(pTablesFile, 0, SEEK_SET);
-    fwrite(tablesCatalogHeader, 1, sizeof(TablesCatalogHeader), pTablesFile);
-    fflush(pTablesFile);
+    rewind(pTablesFile);
+
+    if (fwrite(tablesCatalogHeader, sizeof(TablesCatalogHeader), 1, pTablesFile))
+    {
+        fflush(pTablesFile);
+        return SUCCESS;
+    }
+
+    return WRITE_FAILED;
 }
 
 void RelationManager::getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, void * pTablesFile) 
@@ -248,14 +272,21 @@ void RelationManager::updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCat
     columnsCatalogEntry->columnPosition = columnPosition;
  }
 
-void RelationManager::insertColumnsCatalogEntry(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntry,
+RC RelationManager::insertColumnsCatalogEntry(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntry,
 												ColumnsCatalogHeader * columnsCatalogHeader)
 {
 	uint32_t freeSpaceOffset = columnsCatalogHeader->freeSpaceOffset;
 
-    fseek(pColumnsFile, freeSpaceOffset, SEEK_SET);
-    fwrite(columnsCatalogEntry, 1, sizeof(columnsCatalogEntry), pColumnsFile);
-    fflush(pColumnsFile);
+    if (fseek(pColumnsFile, freeSpaceOffset, SEEK_SET))
+        return SEEK_FAILED;
+
+    if (fwrite(columnsCatalogEntry, sizeof(columnsCatalogEntry), 1, pColumnsFile))
+    {
+        fflush(pColumnsFile);
+        return SUCCESS;
+    }
+
+    return WRITE_FAILED;
 }
 /*
 ColumnsCatalogHeader RelationManager::getColumnsCatalogEntry(void * pColumnsFile)
@@ -265,16 +296,28 @@ ColumnsCatalogHeader RelationManager::getColumnsCatalogEntry(void * pColumnsFile
 }
 */
 
+void RelationManager::initializeColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader)
+{
+    columnsCatalogHeader->freeSpaceOffset = sizeof(ColumnsCatalogHeader);
+}
+
+
 void RelationManager::updateColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader)
 {
 	columnsCatalogHeader->freeSpaceOffset += sizeof(ColumnsCatalogHeader);
 }
 
-void RelationManager::insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatalogHeader * columnsCatalogHeader)
+RC RelationManager::insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatalogHeader * columnsCatalogHeader)
 {
-    fseek(pColumnsFile, 0, SEEK_SET);
-    fwrite(columnsCatalogHeader, 1, sizeof(ColumnsCatalogHeader), pColumnsFile);
-    fflush(pColumnsFile);
+    rewind(pColumnsFile);
+
+    if (fwrite(columnsCatalogHeader, sizeof(ColumnsCatalogHeader), 1, pColumnsFile))
+    {
+        fflush(pColumnsFile);
+        return SUCCESS;
+    }
+
+    return WRITE_FAILED;
 }
 
 void RelationManager::getColumnsCatalogHeader(ColumnsCatalogHeader * columnCatalogHeader, void * pColumnsFile)
