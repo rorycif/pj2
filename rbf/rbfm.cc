@@ -424,7 +424,8 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
   }
 
   //get record
-  void * record = malloc(tempRecordEntry.length);       //where entire record is fetched to
+  void * uncasted_record = malloc(tempRecordEntry.length);       //where entire record is fetched to
+  char * record = (char *) uncasted_record;
   getRecordAtOffset(pageData, tempRecordEntry.offset, recordDescriptor, record);
   unsigned start = getAttributeOffset(record, recordDescriptor, attributeName); //where attribute begins
   record += start;

@@ -9,7 +9,67 @@
 
 using namespace std;
 
-# define RM_EOF (-1)  // end of a scan operator
+#define RM_EOF (-1)  // end of a scan operator
+
+#define SUCCESS 0
+#define TABLE_FILE_EXISTS 1
+#define COLUMN_FILE_EXISTS 2
+#define FILE_OPEN_FAILED 3
+
+#define SEEK_FAIL 1
+
+// Catalog Tables
+// Tables
+typedef struct TablesCatalogHeader {
+  uint32_t nextTableId;                   // id number for the next new table
+  uint32_t numOfTables;
+  uint32_t freeSpaceOffset;
+
+  TablesCatalogHeader() {
+    nextTableId = 0;
+    numOfTables = 0;
+    freeSpaceOffset = 0;
+  }
+} TablesCatalogHeader;
+
+typedef struct TablesCatalogEntry {
+  uint32_t tableId;
+  string tableName;
+  string fileName;
+
+  TablesCatalogEntry(uint32_t tableId, string tableName, string fileName) {
+    this->tableId = tableId;
+    this->tableName = tableName;
+    this->fileName = fileName;
+  }
+} TablesCatalogEntry;
+
+// Columns
+typedef struct ColumnsCatalogHeader {
+  uint32_t freeSpaceOffset;
+
+  ColumnsCatalogHeader() {
+    freeSpaceOffset = 0;
+  }
+} ColumnsCatalogHeader;
+
+typedef struct ColumnsCatalogEntry {
+  uint32_t tableId;
+  string columnName;
+  AttrType columnType;
+  uint32_t columnLength;
+  uint32_t columnPosition;
+
+  ColumnsCatalogEntry(uint32_t tableId, string columnName, AttrType columnType, 
+                      uint32_t columnLength, uint32_t columnPosition)
+  {
+    this->tableId = tableId;
+    this->columnName = columnName;
+    this->columnType = columnType;
+    this->columnLength = columnLength;
+    this->columnPosition = columnPosition;
+  }
+} ColumnsCatalogEntry;
 
 // RM_ScanIterator is an iteratr to go through tuples
 class RM_ScanIterator {
@@ -69,6 +129,33 @@ protected:
 
 private:
   static RelationManager *_rm;
+  
+  // catalog files name
+  string tablesCatalogName = "tablesCatalog";
+  string columnsCatalogName = "columnCatalog";
+
+  // ********************** Helper function **********************
+  bool fileExists(const string &filename);
+  
+  // TablesCatalogEntry
+  void updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, uint32_t tableId, string tableName, string fileName);
+  void insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry, uint32_t entryId);
+  //TablesCatalogEntry getTablesCatalogEntry(void * pTablesFile, uint32_t entryId);
+
+  // TablesCatalogHeader
+  void updateTablesCatalogHeader(TablesCatalogHeader * tablescatalogHeader);
+  void insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader);
+  void getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, void * pTablesFile);
+
+  // ColumnsCatalogEntry
+  void updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, uint32_t tableId, string columnName, AttrType columnType, uint32_t columnLength, uint32_t columnPosition);
+  void insertColumnsCatalogEntry(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntry, ColumnsCatalogHeader * columnsCatalogHeader);
+  //TablesCatalogHeader getColumnsCatalogEntry(void * pTablesFile);
+
+  // ColumnsCatalogHeader
+  void updateColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
+  void insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatalogHeader * columnsCatalogHeader);
+  void getColumnsCatalogHeader(ColumnsCatalogHeader * columnCatalogHeader, void * pColumnsFile);
 };
 
 #endif
