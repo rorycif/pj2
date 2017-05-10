@@ -356,6 +356,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
         free(currentPage);
         cout<< "moving on to next page\n";
       }
+    rbfm_ScanIterator.fhp = &fileHandle;          //so scan iterater knows which file to read from
       return SUCCESS;
     }
 
@@ -830,7 +831,7 @@ bool RecordBasedFileManager::compareAttributes(const void * record, const void *
     case TypeVarChar:   //comparing strings
     {
       recordCast += start;
-      int * size = (int *)recordCast;
+      //int * size = (int *)recordCast;
       recordCast += INT_SIZE;
       string tempString = "";
       tempString += recordCast;
@@ -967,5 +968,15 @@ bool RecordBasedFileManager::compareCheckVarChar(string val1, CompOp compOp, str
 }
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data){
-  return -1;
+    cout<< "scan iterator reading from file\n";
+    //read page from rid and get header
+    void * tempPage = malloc(PAGE_SIZE);
+    fhp->readPage(rid.pageNum,tempPage);
+    //SlotDirectoryHeader tempHeader = RecordBasedFileManager::_rbf_manager->getSlotDirectoryHeader(tempPage);
+    //SlotDirectoryRecordEntry tempRecordEntry = RecordBasedFileManager::_rbf_manager->getSlotDirectoryRecordEntry(tempPage.rid.slotNum);
+    if (rid.pageNum == records[records.size() -1].pageNum && rid.slotNum == records[records.size()-1].slotNum){
+        return RBFM_EOF;                //last element was called
+    }
+    free(tempPage);
+    return -1;
 }

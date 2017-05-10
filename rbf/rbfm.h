@@ -112,6 +112,8 @@ The scan iterator is NOT required to be implemented for the part 1 of the projec
 
 class RBFM_ScanIterator {
 public:
+    FileHandle * fhp;
+  string fileName;                      //the file where records lie
   vector<RID> records;
   RBFM_ScanIterator() {};
   ~RBFM_ScanIterator() {};
@@ -218,6 +220,9 @@ private:
   bool compareCheckInt(int val1, CompOp compOp, int val2);
   bool compareCheckFloat(float val1, CompOp compOp, float val2);
   bool compareCheckVarChar(string val1, CompOp compOp, string val2);
+    
+    //so that the iterater can use this class's private functions
+    friend class RBFM_ScanIterator;
 };
 
 #endif

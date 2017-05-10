@@ -72,7 +72,7 @@ RC PagedFileManager::openFile(const string &fileName, FileHandle &fileHandle)
         return PFM_OPEN_FAILED;
 
     fileHandle.setfd(pFile);
-
+    fileHandle.fileName = fileName;
     return SUCCESS;
 }
 
