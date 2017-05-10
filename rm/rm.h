@@ -12,9 +12,11 @@ using namespace std;
 #define RM_EOF (-1)  // end of a scan operator
 
 #define SUCCESS 0
+
 #define TABLE_FILE_EXISTS 1
 #define COLUMN_FILE_EXISTS 2
 #define FILE_OPEN_FAILED 3
+#define DELETE_FAILED 4
 
 #define SEEK_FAILED 1
 #define WRITE_FAILED 2
