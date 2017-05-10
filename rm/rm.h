@@ -21,6 +21,7 @@ using namespace std;
 #define SEEK_FAILED 1
 #define WRITE_FAILED 2
 #define INSERT_FAILED 3
+#define READ_FAILED 4
 
 // Catalog Tables
 // Tables Catelog
@@ -124,7 +125,7 @@ private:
   void  initializeTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader);
   void updateTablesCatalogHeader(TablesCatalogHeader * tablescatalogHeader);
   RC insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader);
-  void getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, void * pTablesFile);
+  RC getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, FILE * pTablesFile);
 
   // ColumnsCatalogEntry
   void updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, uint32_t tableId, string columnName, AttrType columnType, uint32_t columnLength, uint32_t columnPosition);
@@ -135,7 +136,7 @@ private:
   void initializeColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
   void updateColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
   RC insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatalogHeader * columnsCatalogHeader);
-  void getColumnsCatalogHeader(ColumnsCatalogHeader * columnCatalogHeader, void * pColumnsFile);
+  RC getColumnsCatalogHeader(ColumnsCatalogHeader * columnCatalogHeader, FILE * pColumnsFile);
 };
 
 #endif

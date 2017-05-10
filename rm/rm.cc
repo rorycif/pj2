@@ -113,7 +113,8 @@ RC RelationManager::createCatalog()
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
 	// write columnsCatalogHeader to disk
-	insertColumnsCatalogHeader(pColumnsFile, &columnsCatalogHeader);
+    if (insertColumnsCatalogHeader(pColumnsFile, &columnsCatalogHeader))
+        return INSERT_FAILED;
 
 	// free the pointers
     fclose(pTablesFile);
@@ -141,7 +142,65 @@ RC RelationManager::deleteCatalog()
 
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)
 {
-    return -1;
+    if (fileExists(tableName.c_str()))
+        return FILE_EXISTS;
+
+    // create the RBF file with tablename
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    if (_rbfm->createFile(tableName))
+        return RBFM_CREATE_FAILED;
+
+    // check if the catalog files exist
+    if (fileExists(tablesCatalogName) == 0)
+        return FILE_DOES_NOT_EXIST;
+
+    if (fileExists(columnsCatalogName) == 0)
+        return FILE_DOES_NOT_EXIST;
+    
+    // open and read the headers from disk
+    FILE * pTablesFile = fopen(tablesCatalogName.c_str(), "rb+");
+    FILE * pColumnsFile = fopen(columnsCatalogName.c_str(), "rb+");
+
+    TablesCatalogHeader tempTablesCatalogHeader;
+    ColumnsCatalogHeader tempColumnsCatalogHeader;
+    uint32_t tableId;
+
+    if (getTablesCatalogHeader(&tempTablesCatalogHeader, pTablesFile))
+        return READ_FAILED;
+
+    if (getColumnsCatalogHeader(&tempColumnsCatalogHeader, pColumnsFile))
+        return READ_FAILED;
+
+    // insert the table into tables catalog on disk
+    TablesCatalogEntry tempTablesCatalogEntry;
+    tableId = tempTablesCatalogHeader.nextTableId;
+    updateTablesCatalogEntry(&tempTablesCatalogEntry, tableId, tableName, tableName);
+    if (insertTablesCatalogEntry(pTablesFile, &tempTablesCatalogEntry))
+        return INSERT_FAILED;
+
+    // update the header of tables catalog on disk
+    updateTablesCatalogHeader(&tempTablesCatalogHeader);
+    if (insertTablesCatalogHeader(pTablesFile, &tempTablesCatalogHeader))
+        return INSERT_FAILED;
+
+    // insert the column attributes into tables catalog on dsik
+    ColumnsCatalogEntry tempColumnsCatalogEntry;
+    for(uint16_t i = 0; i < attrs.size(); i++) 
+    {
+        // TBC
+        // create the entry
+        // insert the entry
+        // update the header in memory 
+    }
+
+    // TBC
+    // update the header on disk
+
+    // close the file
+    fclose(pTablesFile);
+    fclose(pColumnsFile);
+
+    return SUCCESS;
 }
 
 RC RelationManager::deleteTable(const string &tableName)
@@ -265,13 +324,22 @@ RC RelationManager::insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogH
     return WRITE_FAILED;
 }
 
-void RelationManager::getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, void * pTablesFile) 
+RC RelationManager::getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, FILE * pTablesFile) 
 {
+    // read header from the disk
+    void * raw = malloc(sizeof(TablesCatalogHeader));
+    if (fread(raw, sizeof(TablesCatalogHeader), 1, pTablesFile) != 1)
+        return READ_FAILED;
+
+    // copy the header to memory 
     memcpy(
         tablesCatalogHeader,
-        pTablesFile,
+        raw,
         sizeof(TablesCatalogHeader)
     );
+
+    free(raw);
+    return SUCCESS;
 }
 
 void RelationManager::updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, uint32_t tableId, string columnName,
@@ -332,11 +400,20 @@ RC RelationManager::insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatal
     return WRITE_FAILED;
 }
 
-void RelationManager::getColumnsCatalogHeader(ColumnsCatalogHeader * columnCatalogHeader, void * pColumnsFile)
+RC RelationManager::getColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader, FILE * pColumnsFile)
 {
-	memcpy(
-		columnCatalogHeader,
-		pColumnsFile,
-		sizeof(ColumnsCatalogHeader)
-	);
+    // read header from the disk
+    void * raw = malloc(sizeof(ColumnsCatalogHeader));
+    if (fread(raw, sizeof(ColumnsCatalogHeader), 1, pColumnsFile) != 1)
+        return READ_FAILED;
+
+    // copy the header to memory
+    memcpy(
+        columnsCatalogHeader,
+        raw,
+        sizeof(ColumnsCatalogHeader)
+    );
+
+    free(raw);
+    return SUCCESS;
 }
