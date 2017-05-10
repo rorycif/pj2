@@ -112,6 +112,7 @@ The scan iterator is NOT required to be implemented for the part 1 of the projec
 
 class RBFM_ScanIterator {
 public:
+  vector<RID> records;
   RBFM_ScanIterator() {};
   ~RBFM_ScanIterator() {};
 
@@ -119,7 +120,7 @@ public:
   // Never keep the results in the memory. When getNextRecord() is called,
   // a satisfying record needs to be fetched from the file.
   // "data" follows the same format as RecordBasedFileManager::insertRecord().
-  RC getNextRecord(RID &rid, void *data) { return RBFM_EOF; };
+  RC getNextRecord(RID &rid, void *data);
   RC close() { return -1; };
 };
 
@@ -214,7 +215,6 @@ private:
   void compaction(void * pageData, SlotDirectoryHeader tempHeader, SlotDirectoryRecordEntry tempRecordEntry, unsigned shorten, unsigned slotNum);
   unsigned getAttributeOffset(const void * record, const vector<Attribute> &recordDescriptor, const string &attributeName);
   bool compareAttributes(const void * record, const void * value, AttrType type, string conditionAttribute, vector<Attribute> recordDescriptor, CompOp compOp);
-  void addAttributesToFile(FILE * file, const void * record, vector<string> attributeNames);
   bool compareCheckInt(int val1, CompOp compOp, int val2);
   bool compareCheckFloat(float val1, CompOp compOp, float val2);
   bool compareCheckVarChar(string val1, CompOp compOp, string val2);
