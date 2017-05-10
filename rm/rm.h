@@ -13,8 +13,8 @@ using namespace std;
 
 #define SUCCESS 0
 
-#define TABLE_FILE_EXISTS 1
-#define COLUMN_FILE_EXISTS 2
+#define FILE_EXISTS 1
+#define FILE_DOES_NOT_EXIST 2
 #define FILE_OPEN_FAILED 3
 #define DELETE_FAILED 4
 
@@ -110,7 +110,7 @@ private:
   
   // catalog files name
   string tablesCatalogName = "tablesCatalog";
-  string columnsCatalogName = "columnCatalog";
+  string columnsCatalogName = "columnsCatalog";
 
   // ********************** Helper function **********************
   bool fileExists(const string &filename);

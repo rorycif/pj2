@@ -29,11 +29,11 @@ RC RelationManager::createCatalog()
     
     // Check if the catalog files exist
     if (fileExists(tablesCatalogName)) {
-        return TABLE_FILE_EXISTS;
+        return FILE_EXISTS;
     }
 
     if (fileExists(columnsCatalogName)) {
-        return COLUMN_FILE_EXISTS;
+        return FILE_EXISTS;
     }
 
     // Create the catalog files in disk
@@ -123,11 +123,17 @@ RC RelationManager::createCatalog()
 }
 
 RC RelationManager::deleteCatalog()
-{
-    if (remove(tablesCatalogName.c_str()))
+{   
+    if (fileExists(tablesCatalogName.c_str()) == 0)
+        return FILE_DOES_NOT_EXIST;
+
+    if (fileExists(columnsCatalogName.c_str()) == 0)
+        return FILE_DOES_NOT_EXIST;
+
+    if (remove(tablesCatalogName.c_str()) != 0)
         return DELETE_FAILED;
 
-    if (remove(columnsCatalogName.c_str()))
+    if (remove(columnsCatalogName.c_str()) != 0)
         return DELETE_FAILED;
 
     return SUCCESS;
