@@ -1,6 +1,7 @@
 
 #include "rm.h"
 
+
 #include <stdio.h>
 #include <string>
 #include <iostream>
@@ -26,7 +27,7 @@ RelationManager::~RelationManager()
 
 RC RelationManager::createCatalog()
 {
-    
+
     // Check if the catalog files exist
     if (fileExists(tablesCatalogName)) {
         return FILE_EXISTS;
@@ -54,7 +55,7 @@ RC RelationManager::createCatalog()
     // initizlize the Headers
     initializeTablesCatalogHeader(&tablesCatalogHeader);
     initializeColumnsCatalogHeader(&columnsCatalogHeader);
-    
+
     // Add Table "Tables" to Tables Catalog
     updateTablesCatalogEntry(&tablesCatalogEntry, 0, "Tables", "Tables");
     if (insertTablesCatalogEntry(pTablesFile, &tablesCatalogEntry))
@@ -86,12 +87,12 @@ RC RelationManager::createCatalog()
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
-    
+
     updateColumnsCatalogEntry(&columnsCatalogEntry, 2, "table-id", TypeInt, 4, 1);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
-    
+
     updateColumnsCatalogEntry(&columnsCatalogEntry, 2, "column-name", TypeVarChar, 50, 2);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
@@ -124,7 +125,7 @@ RC RelationManager::createCatalog()
 }
 
 RC RelationManager::deleteCatalog()
-{   
+{
     if (fileExists(tablesCatalogName.c_str()) == 0)
         return FILE_DOES_NOT_EXIST;
 
@@ -156,7 +157,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
     if (fileExists(columnsCatalogName) == 0)
         return FILE_DOES_NOT_EXIST;
-    
+
     // open and read the headers from disk
     FILE * pTablesFile = fopen(tablesCatalogName.c_str(), "rb+");
     FILE * pColumnsFile = fopen(columnsCatalogName.c_str(), "rb+");
@@ -185,12 +186,12 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
     // insert the column attributes into tables catalog on dsik
     ColumnsCatalogEntry tempColumnsCatalogEntry;
-    for(uint16_t i = 0; i < attrs.size(); i++) 
+    for(uint16_t i = 0; i < attrs.size(); i++)
     {
         // TBC
         // create the entry
         // insert the entry
-        // update the header in memory 
+        // update the header in memory
     }
 
     // TBC
@@ -245,8 +246,8 @@ RC RelationManager::readAttribute(const string &tableName, const RID &rid, const
 
 RC RelationManager::scan(const string &tableName,
       const string &conditionAttribute,
-      const CompOp compOp,                  
-      const void *value,                    
+      const CompOp compOp,
+      const void *value,
       const vector<string> &attributeNames,
       RM_ScanIterator &rm_ScanIterator)
 {
@@ -268,13 +269,13 @@ void RelationManager::updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalo
 	tablesCatalogEntry->fileName = fileName;
 }
 
-RC RelationManager::insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry) 
+RC RelationManager::insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry)
 {
     uint32_t tableId = tablesCatalogEntry->tableId;
 
     if (fseek(pTablesFile, (sizeof(TablesCatalogHeader) + tableId * sizeof(TablesCatalogEntry)), SEEK_SET))
         return SEEK_FAILED;
-    
+
     if (fwrite(tablesCatalogEntry, sizeof(TablesCatalogEntry), 1, pTablesFile))
     {
         fflush(pTablesFile);
@@ -284,7 +285,7 @@ RC RelationManager::insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEn
     return WRITE_FAILED;
 }
 /*
-TablesCatalogEntry RelationManager::getTablesCatalogEntry(void * pTablesFile, uint32_t entryId) 
+TablesCatalogEntry RelationManager::getTablesCatalogEntry(void * pTablesFile, uint32_t entryId)
 {
     TablesCatalogEntry tablesCatalogEntry;
     memcpy(
@@ -311,7 +312,7 @@ void RelationManager::updateTablesCatalogHeader(TablesCatalogHeader * tablescata
 }
 
 
-RC RelationManager::insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader) 
+RC RelationManager::insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogHeader * tablesCatalogHeader)
 {
     rewind(pTablesFile);
 
@@ -324,14 +325,14 @@ RC RelationManager::insertTablesCatalogHeader(FILE * pTablesFile, TablesCatalogH
     return WRITE_FAILED;
 }
 
-RC RelationManager::getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, FILE * pTablesFile) 
+RC RelationManager::getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, FILE * pTablesFile)
 {
     // read header from the disk
     void * raw = malloc(sizeof(TablesCatalogHeader));
     if (fread(raw, sizeof(TablesCatalogHeader), 1, pTablesFile) != 1)
         return READ_FAILED;
 
-    // copy the header to memory 
+    // copy the header to memory
     memcpy(
         tablesCatalogHeader,
         raw,

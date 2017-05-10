@@ -3,6 +3,7 @@
 #define _rm_h_
 
 #include <string>
+#include <cstring>
 #include <vector>
 
 #include "../rbf/rbfm.h"
@@ -108,14 +109,14 @@ protected:
 
 private:
   static RelationManager *_rm;
-  
+
   // catalog files name
   string tablesCatalogName = "tablesCatalog";
   string columnsCatalogName = "columnsCatalog";
 
   // ********************** Helper function **********************
   bool fileExists(const string &filename);
-  
+
   // TablesCatalogEntry
   void updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, uint32_t tableId, string tableName, string fileName);
   RC insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry);
