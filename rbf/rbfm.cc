@@ -349,7 +349,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
           if (compareAttributes(currentRecord, value, targetType, conditionAttribute, recordDescriptor, compOp)){
             tempRid.pageNum =i;
             tempRid.slotNum =j;
-            rbfm_ScanIterator.records.push_back(tempRid);
+            rbfm_ScanIterator.records.push_back(tempRid);     //the record's location is saved to iterator
           }
           free (currentRecord);
         }
@@ -357,6 +357,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
         cout<< "moving on to next page\n";
       }
     rbfm_ScanIterator.fhp = &fileHandle;          //so scan iterater knows which file to read from
+    rbfm_ScanIterator.SI_recordDescriptor = recordDescriptor;
       return SUCCESS;
     }
 
@@ -969,14 +970,20 @@ bool RecordBasedFileManager::compareCheckVarChar(string val1, CompOp compOp, str
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data){
     cout<< "scan iterator reading from file\n";
-    //read page from rid and get header
+    //no instances in iterator
+    if (!records.size()){
+      return RBFM_EOF;
+    }
+    //read page from rid and its slot descriptor
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
     void * tempPage = malloc(PAGE_SIZE);
     fhp->readPage(rid.pageNum,tempPage);
-    //SlotDirectoryHeader tempHeader = RecordBasedFileManager::_rbf_manager->getSlotDirectoryHeader(tempPage);
-    //SlotDirectoryRecordEntry tempRecordEntry = RecordBasedFileManager::_rbf_manager->getSlotDirectoryRecordEntry(tempPage.rid.slotNum);
+    SlotDirectoryRecordEntry tempRecordEntry = _rbfm->getSlotDirectoryRecordEntry(tempPage,rid.slotNum);
+    //extract record to data pointer
+    _rbfm->getRecordAtOffset(tempPage, tempRecordEntry.offset, SI_recordDescriptor, data);
+    free(tempPage);
     if (rid.pageNum == records[records.size() -1].pageNum && rid.slotNum == records[records.size()-1].slotNum){
         return RBFM_EOF;                //last element was called
     }
-    free(tempPage);
-    return -1;
+    return SUCCESS;
 }
