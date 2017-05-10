@@ -327,11 +327,11 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 
       //make file for scan iterator
       string fileName = rbfm_ScanIterator.getFileName(value, conditionAttribute, compOp, attributeNames,targetType);
-      FILE * pFile = fopen(fileName.c_str(), "wb");
 
       //iterate though pages
       void * currentPage;
       void * currentRecord;
+      RID tempRid;
       SlotDirectoryHeader tempHeader;
       SlotDirectoryRecordEntry tempRecordEntry;
       for (unsigned i =0; i < pageCount; i++){
@@ -340,25 +340,23 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
         fileHandle.readPage(i,currentPage);
         tempHeader = getSlotDirectoryHeader(currentPage);
         //iterate though each record on page
-        for (unsigned i =0; i < tempHeader.recordEntriesNumber; i ++){
-          cout<< "iterating through record "<< i<<endl;
-          tempRecordEntry = getSlotDirectoryRecordEntry(currentPage,i);
+        for (unsigned j =0; j < tempHeader.recordEntriesNumber; j ++){
+          cout<< "iterating through record "<< j<<endl;
+          tempRecordEntry = getSlotDirectoryRecordEntry(currentPage,j);
           currentRecord = malloc(tempRecordEntry.length);
           getRecordAtOffset(currentPage, tempRecordEntry.offset, recordDescriptor, currentRecord);
           //compare the record for condition
           if (compareAttributes(currentRecord, value, targetType, conditionAttribute, recordDescriptor, compOp)){
-            addAttributesToFile(pFile, currentRecord, attributeNames);  //meets critera add to iterater file
+            tempRid.pageNum =i;
+            tempRid.slotNum =j;
+            rbfm_ScanIterator.records.push_back(tempRid);
           }
           free (currentRecord);
         }
         free(currentPage);
         cout<< "moving on to next page\n";
       }
-      //get record count
-      //iterate though records
-      //record check
-      //if matches comparison add to data
-      return -1;
+      return SUCCESS;
     }
 
 //helper function when a new page with enough space is needed
@@ -424,8 +422,8 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
   }
 
   //get record
-  void * uncasted_record = malloc(tempRecordEntry.length);       //where entire record is fetched to
-  char * record = (char *) uncasted_record;
+  void * recordCast = malloc(tempRecordEntry.length);       //where entire record is fetched to
+    char * record = (char *)recordCast;
   getRecordAtOffset(pageData, tempRecordEntry.offset, recordDescriptor, record);
   unsigned start = getAttributeOffset(record, recordDescriptor, attributeName); //where attribute begins
   record += start;
@@ -967,7 +965,7 @@ bool RecordBasedFileManager::compareCheckVarChar(string val1, CompOp compOp, str
   }
   return false; //should not reach here
 }
-//used to append parts record to a file
-void RecordBasedFileManager::addAttributesToFile(FILE * file,const void * record, vector<string> attributeNames){
 
+RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data){
+  return -1;
 }
