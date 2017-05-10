@@ -186,16 +186,27 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
     // insert the column attributes into tables catalog on dsik
     ColumnsCatalogEntry tempColumnsCatalogEntry;
+    string columnName;
+    AttrType columnType;
+    uint32_t columnLength;
+
+    // insert each columns attribute to disk
     for(uint16_t i = 0; i < attrs.size(); i++)
     {
-        // TBC
-        // create the entry
-        // insert the entry
-        // update the header in memory
+        columnName = attrs[i].name;
+        columnType = attrs[i].type;
+        columnLength = attrs[i].length;
+        updateColumnsCatalogEntry(&tempColumnsCatalogEntry, tableId, columnName,
+                                    columnType, columnLength, i);
+        if (insertColumnsCatalogEntry(pColumnsFile, &tempColumnsCatalogEntry, &tempColumnsCatalogHeader))
+            return INSERT_FAILED;
+        
+        // udpate the column catelog header in memory
+        updateColumnsCatalogHeader(&tempColumnsCatalogHeader);
     }
 
-    // TBC
-    // update the header on disk
+    // update the header of column catalog on dsik
+    insertColumnsCatalogHeader(pColumnsFile, &tempColumnsCatalogHeader);
 
     // close the file
     fclose(pTablesFile);
