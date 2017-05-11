@@ -836,8 +836,8 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
   assert(rc == success && "Opening the file should not fail.");
 
   RID rid;
-  RID rid2;
-  RID rid3;
+  //RID rid2;
+  //RID rid3;
   int recordSize = 0;
   int recordSize2 = 0;
   //int recordSize3 = 0;
@@ -857,12 +857,12 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
 
   // Insert a record into a file and print the record
   prepareRecord(recordDescriptor.size(), nullsIndicator, 9, "preupdate", 27, 177.8, 6200, record, &recordSize);
-  prepareRecord(recordDescriptor.size(), nullsIndicator, 9, "short", 79, 177.8, 6200, record2, &recordSize2);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 5, "short", 79, 177.8, 6200, record2, &recordSize2);
   cout<< "test 12 record sizes "<< recordSize<< " "<< recordSize2<<endl;
 
   rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
   rc = rbfm->printRecord(recordDescriptor, record);
-  rc = rbfm->printRecord(recordDescriptor, record2);
+  //rc = rbfm->printRecord(recordDescriptor, record2);
 
 //  rc = rbfm->deleteRecord(fileHandle, recordDescriptor,rid);
   rc = rbfm->updateRecord(fileHandle,recordDescriptor,record2,rid);
