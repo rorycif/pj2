@@ -17,7 +17,6 @@ using namespace std;
 #define FILE_EXISTS 1
 #define FILE_DOES_NOT_EXIST 2
 #define FILE_OPEN_FAILED 3
-#define TABLE_DOES_NOT_EXIST 4
 
 #define SEEK_FAILED 1
 #define WRITE_FAILED 2
@@ -26,6 +25,7 @@ using namespace std;
 #define RENAME_FAILED 5
 #define TRANSFER_FAILED 6
 #define DELETE_FAILED 7
+#define TABLE_DOES_NOT_EXIST 8
 
 // Catalog Tables
 // Tables Catelog
@@ -119,6 +119,7 @@ private:
 
   // ********************** Helper function **********************
   bool fileExists(const string &filename);
+  RC getTableInfoByTableName(string tableName, TablesCatalogEntry * tablesCatalogEntry);
   RC transferTablesCatalogRecoreds(FILE * srcFile, FILE * destFile, string tableName, uint32_t headOffset, uint32_t endOffset, uint32_t sizeOfRecord, uint32_t * count, uint32_t * tableId, string * fileName);
   RC transferColumnsCatalogRecoreds(FILE * srcFile, FILE * destFile, uint32_t tableId, uint32_t headOffset, uint32_t endOffset, uint32_t sizeOfRecord, uint32_t * count);
 
