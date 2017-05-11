@@ -17,7 +17,7 @@ using namespace std;
 #define FILE_EXISTS 1
 #define FILE_DOES_NOT_EXIST 2
 #define FILE_OPEN_FAILED 3
-#define DELETE_FAILED 4
+#define TABLE_DOES_NOT_EXIST 4
 
 #define SEEK_FAILED 1
 #define WRITE_FAILED 2
@@ -25,6 +25,7 @@ using namespace std;
 #define READ_FAILED 4
 #define RENAME_FAILED 5
 #define TRANSFER_FAILED 6
+#define DELETE_FAILED 7
 
 // Catalog Tables
 // Tables Catelog

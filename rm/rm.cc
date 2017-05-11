@@ -212,6 +212,8 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
     fclose(pTablesFile);
     fclose(pColumnsFile);
 
+    // TBC -- free _rbfm??
+
     return SUCCESS;
 }
 
@@ -369,12 +371,73 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
         offset += sizeof(ColumnsCatalogEntry);
     }
 
+    // close files
+    fclose(pTablesFile);
+    fclose(pColumnsFile);
+
     return SUCCESS;
 }
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
-    return -1;
+    // Check if catalog files exist
+    if (!fileExists(tablesCatalogName))
+        return FILE_DOES_NOT_EXIST;
+
+    // get file name from tables catalog
+    TablesCatalogHeader tempTablesCatalogHeader;
+    FILE * pTablesFile = fopen(tablesCatalogName.c_str(), "rb");
+
+    if (getTablesCatalogHeader(&tempTablesCatalogHeader, pTablesFile))
+        return READ_FAILED;
+
+    string fileName;
+    uint32_t tableId;
+    bool isFound = false;
+    uint32_t offset = sizeof(TablesCatalogHeader);
+    TablesCatalogEntry tempTablesCatalogEntry;
+
+    while (offset < tempTablesCatalogHeader.freeSpaceOffset)
+    {
+        if (getTablesCatalogEntry(pTablesFile, offset, &tempTablesCatalogEntry))
+            return READ_FAILED;
+
+        if (tableName.compare(tempTablesCatalogEntry.tableName) == 0)
+        {
+            fileName = tempTablesCatalogEntry.fileName;
+            tableId = tempTablesCatalogEntry.tableId;
+            isFound = true;
+        }
+        
+        offset += sizeof(TablesCatalogEntry);
+    }
+    
+    // check if the table and the file of table exist
+    if (!isFound) 
+        return TABLE_DOES_NOT_EXIST;
+
+    if (!fileExists(fileName))
+        return FILE_DOES_NOT_EXIST;
+
+    // open table file
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    FileHandle fileHandle;
+    _rbfm->openFile(fileName, fileHandle);
+    
+    // get tuple attributes from catalogs
+    vector<Attribute> tupleAttrs;
+    if (getAttributes(fileName, tupleAttrs))
+        return READ_FAILED;
+
+    // insert tuple
+    _rbfm->insertRecord(fileHandle, tupleAttrs, data, rid);
+
+    // Close file
+    fclose(pTablesFile);
+
+    // TBC -- free _rbfm??
+
+    return SUCCESS;
 }
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
