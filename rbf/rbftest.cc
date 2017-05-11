@@ -761,9 +761,11 @@ int RBFTest_11(RecordBasedFileManager *rbfm){
   assert(rc == success && "Opening the file should not fail.");
 
   RID rid;
+  RID rid2;
   int recordSize = 0;
   void *record = malloc(100);
-//  void *returnedData = malloc(100);
+  void *record2 = malloc(100);
+  void *returnedData = malloc(100);
 
   vector<Attribute> recordDescriptor;
   createRecordDescriptor(recordDescriptor);
@@ -775,22 +777,40 @@ int RBFTest_11(RecordBasedFileManager *rbfm){
 
   // Insert a record into a file and print the record
   prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "Anteater", 25, 177.8, 6200, record, &recordSize);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "Anteater", 79, 177.8, 6200, record2, &recordSize);
   cout << endl << "Inserting Data:" << endl;
   //rbfm->printRecord(recordDescriptor, record);
+  //rbfm->printRecord(recordDescriptor, record2);
 
   rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
+  rc = rbfm->insertRecord(fileHandle, recordDescriptor, record2, rid2);
+  cout<< "post insert rid: "<<rid.pageNum<< " "<< rid.slotNum<<endl;
   assert(rc == success && "Inserting a record should not fail.");
 
   // Given the rid, read the record from file
   //rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
-  assert(rc == success && "Reading a record should not fail.");
+  //assert(rc == success && "Reading a record should not fail.");
 
-  cout << endl << "Returned Data:" << endl;
+  //cout << endl << "Returned Data:" << endl;
   //rbfm->printRecord(recordDescriptor, returnedData);
 
-//  cout<< endl<< "deleting data"<< endl;
   rc = rbfm->deleteRecord(fileHandle,recordDescriptor,rid);
   assert(rc == success && "Delting the file should not fail.");
+  cout<< "reading from deleted\n";
+  rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
+  if (rc == RBFM_INVALID_RID)
+    cout<< "recognized dead\n";
+
+  //rc = rbfm->printRecord(recordDescriptor,returnedData);
+  //assert(rc != success && "reading deleted record should fail");
+  cout<< "pre close/ destroy\n";
+  rc = rbfm->closeFile(fileHandle);
+  rc = rbfm->destroyFile(fileName);
+  cout<< "post close/ destroy\n";
+  free(record);
+  free(record2);
+  free(returnedData);
+  cout<< "freeing stuff\n";
   return 0;
 }
 

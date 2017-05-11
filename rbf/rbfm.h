@@ -29,6 +29,8 @@
 #define RBFM_UPDATE_FAIL 12
 #define RBFM_ATTRIBUTE_DN_EXIST 13
 #define RBFM_EMPTY_SCAN 14
+#define RBFM_INVALID_RID 15
+#define RBFM_EMPTY_PRINT 16
 
 using namespace std;
 
@@ -114,7 +116,7 @@ class RBFM_ScanIterator {
 public:
   FileHandle * fhp;                     //pointer to a filehandle for method access
   string fileName;                      //the file where records lie
-  vector <Attribute> SI_recordDescriptor; 
+  vector <Attribute> SI_recordDescriptor;
   vector<RID> records;
   RBFM_ScanIterator() {};
   ~RBFM_ScanIterator() {};
