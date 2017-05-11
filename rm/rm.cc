@@ -73,42 +73,42 @@ RC RelationManager::createCatalog()
         return INSERT_FAILED;
 
     // Add conlumns info of each table to Columns Catalog
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "table-id", TypeInt, 4 , 1);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 0, "table-id", TypeInt, 4 , 1);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "table-name", TypeVarChar, 50, 2);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 0, "table-name", TypeVarChar, 50, 2);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "file-name", TypeVarChar, 50, 3);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 0, "file-name", TypeVarChar, 50, 3);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 2, "table-id", TypeInt, 4, 1);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "table-id", TypeInt, 4, 1);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 2, "column-name", TypeVarChar, 50, 2);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "column-name", TypeVarChar, 50, 2);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 2, "column-type", TypeInt, 4, 3);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "column-type", TypeInt, 4, 3);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 2, "column-length", TypeInt, 4, 4);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "column-length", TypeInt, 4, 4);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
 
-    updateColumnsCatalogEntry(&columnsCatalogEntry, 2, "column-position", TypeInt, 4, 5);
+    updateColumnsCatalogEntry(&columnsCatalogEntry, 1, "column-position", TypeInt, 4, 5);
     if (insertColumnsCatalogEntry(pColumnsFile, &columnsCatalogEntry, &columnsCatalogHeader))
         return INSERT_FAILED;
     updateColumnsCatalogHeader(&columnsCatalogHeader);
@@ -126,10 +126,10 @@ RC RelationManager::createCatalog()
 
 RC RelationManager::deleteCatalog()
 {
-    if (fileExists(tablesCatalogName.c_str()) == 0)
+    if (!fileExists(tablesCatalogName))
         return FILE_DOES_NOT_EXIST;
 
-    if (fileExists(columnsCatalogName.c_str()) == 0)
+    if (!fileExists(columnsCatalogName))
         return FILE_DOES_NOT_EXIST;
 
     if (remove(tablesCatalogName.c_str()) != 0)
@@ -152,10 +152,10 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
         return RBFM_CREATE_FAILED;
 
     // check if the catalog files exist
-    if (fileExists(tablesCatalogName) == 0)
+    if (!fileExists(tablesCatalogName))
         return FILE_DOES_NOT_EXIST;
 
-    if (fileExists(columnsCatalogName) == 0)
+    if (!fileExists(columnsCatalogName))
         return FILE_DOES_NOT_EXIST;
 
     // open and read the headers from disk
@@ -217,7 +217,83 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 RC RelationManager::deleteTable(const string &tableName)
 {
-    return -1;
+    // check if catalogs file exists
+    if (!fileExists(tablesCatalogName))
+        return FILE_DOES_NOT_EXIST;
+
+    if (!fileExists(columnsCatalogName))
+        return FILE_DOES_NOT_EXIST;
+
+    // ******** DELETE RECORDS IN TABLES CATALOG ********
+    // Read table catalog from disk
+    FILE * pTablesFile = fopen(tablesCatalogName.c_str(), "rb+");
+    TablesCatalogHeader tempTablesCatalogHeader;
+    if (getTablesCatalogHeader(&tempTablesCatalogHeader, pTablesFile))
+        return READ_FAILED;
+    
+    // Create temporary table catalog file to store the reamained records
+    string newTablesCatalogName = tablesCatalogName + "_t";
+    FILE * pNewTablesFile = fopen(newTablesCatalogName.c_str(), "wb");
+    
+    // Transfer the record to temorary table catalog
+    uint32_t count = 0; // number of deleted records
+    uint32_t tableId;
+    string fileName;
+    if (transferTablesCatalogRecoreds(pTablesFile, pNewTablesFile, tableName, sizeof(TablesCatalogHeader), 
+                                tempTablesCatalogHeader.freeSpaceOffset, sizeof(TablesCatalogEntry), &count, &tableId, &fileName))
+        return TRANSFER_FAILED;
+
+    //Check if the RBF file exists
+    if (count == 0) {
+        fclose(pTablesFile);
+        fclose(pNewTablesFile);
+        remove(newTablesCatalogName.c_str());
+        return FILE_DOES_NOT_EXIST;
+    }
+
+    // Insert the updated header to tables catalog
+    tempTablesCatalogHeader.numOfTables -= count;
+    tempTablesCatalogHeader.freeSpaceOffset -= (count * sizeof(TablesCatalogEntry));
+    insertTablesCatalogHeader(pNewTablesFile, &tempTablesCatalogHeader);
+
+    // ******** DELETE RECORDS IN COLUMNS CATALOG ********
+    // Read column catalog from disk 
+    FILE * pColumnsFile = fopen(columnsCatalogName.c_str(), "rb+");
+    ColumnsCatalogHeader tempColumnsCatalogHeader;
+    if (getColumnsCatalogHeader(&tempColumnsCatalogHeader, pColumnsFile))
+        return READ_FAILED;
+
+    // Create temporary table catalog file to store the reamained records
+    string newColumnsCatalogName = columnsCatalogName + "_t";
+    FILE * pNewColumnsFile = fopen(newColumnsCatalogName.c_str(), "wb");
+
+    // Transfer the record to temorary table catalog
+    count = 0;
+    if (transferColumnsCatalogRecoreds(pColumnsFile, pNewColumnsFile, tableId, sizeof(ColumnsCatalogHeader), tempColumnsCatalogHeader.freeSpaceOffset,
+                                        sizeof(ColumnsCatalogEntry), &count))
+        return TRANSFER_FAILED;
+
+    // Insert the updated header to tables catalog
+    tempColumnsCatalogHeader.freeSpaceOffset -= (count * sizeof(ColumnsCatalogEntry));
+    insertColumnsCatalogHeader(pNewColumnsFile, &tempColumnsCatalogHeader);
+
+    // close files
+    fclose(pTablesFile);
+    fclose(pColumnsFile);
+    fclose(pNewTablesFile);
+    fclose(pNewColumnsFile);
+
+    // use temporary catalogs unstead of the original catalogs
+    remove(tablesCatalogName.c_str());
+    rename(newTablesCatalogName.c_str(), tablesCatalogName.c_str());
+
+    remove(columnsCatalogName.c_str());
+    rename(newColumnsCatalogName.c_str(), columnsCatalogName.c_str());
+
+    // remove the RBF files
+    remove(fileName.c_str());
+
+    return SUCCESS;
 }
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
@@ -270,8 +346,85 @@ bool RelationManager::fileExists(const string &filename)
 {
     // If stat fails, we can safely assume the file doesn't exist
     struct stat sb;
-    return stat(filename.c_str(), &sb) == 0;
+    return (stat(filename.c_str(), &sb) == 0);
 }
+
+RC RelationManager::transferTablesCatalogRecoreds(FILE * srcFile, FILE * destFile, string tableName, uint32_t headOffset,
+                                                 uint32_t endOffset, uint32_t sizeOfRecord, uint32_t * count, uint32_t * tableId, string * fileName)
+{
+    // no record in the source file
+    if (headOffset == endOffset)
+        return SUCCESS;
+
+    uint32_t currentOffset = headOffset;
+    uint32_t newFreeSpaceOffset = headOffset;
+    void * raw = malloc(sizeOfRecord);
+    TablesCatalogEntry tempTablesCatalogEntry;
+
+    while (currentOffset < endOffset) {
+        // get record fom the disk
+        if (getTablesCatalogEntry(srcFile, currentOffset, &tempTablesCatalogEntry))
+            return READ_FAILED;
+
+        // write the record to destination file if it is not the target record
+        if (tableName.compare(tempTablesCatalogEntry.tableName) != 0)
+        {
+            fseek(destFile, newFreeSpaceOffset, SEEK_SET);
+            if (fwrite(&tempTablesCatalogEntry, sizeOfRecord, 1, destFile) != 1)
+                return WRITE_FAILED;
+            fflush(destFile);
+            newFreeSpaceOffset += sizeOfRecord;
+        }
+        else
+        {
+            *count += 1;
+            *tableId = tempTablesCatalogEntry.tableId;
+            *fileName = tempTablesCatalogEntry.fileName;
+        }
+
+        currentOffset += sizeOfRecord;
+    }
+
+    free(raw);
+    return SUCCESS;
+}
+
+RC RelationManager::transferColumnsCatalogRecoreds(FILE * srcFile, FILE * destFile, uint32_t tableId, uint32_t headOffset, uint32_t endOffset, uint32_t sizeOfRecord, uint32_t * count)
+{
+    // no record in the source file
+    if (headOffset == endOffset)
+        return SUCCESS;
+
+    uint32_t currentOffset = headOffset;
+    uint32_t newFreeSpaceOffset = headOffset;
+    void * raw = malloc(sizeOfRecord);
+    ColumnsCatalogEntry tempColumnsCatalogEntry;
+    while (currentOffset < endOffset) {
+        // get record fom the disk
+        if (getColumnsCatalogEntry(srcFile, currentOffset, &tempColumnsCatalogEntry))
+            return READ_FAILED;
+
+        // write the record to destination file if it is not the target record
+        if (tableId != tempColumnsCatalogEntry.tableId)
+        {
+            fseek(destFile, newFreeSpaceOffset, SEEK_SET);
+            if (fwrite(&tempColumnsCatalogEntry, sizeOfRecord, 1, destFile) != 1)
+                return WRITE_FAILED;
+            fflush(destFile);
+            newFreeSpaceOffset += sizeOfRecord;
+        }
+        else
+        {
+            *count += 1;
+        }
+
+        currentOffset += sizeOfRecord;
+    }
+
+    free(raw);
+    return SUCCESS;
+}
+
 
 void RelationManager::updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, uint32_t tableId, string tableName, string fileName)
 {
@@ -284,7 +437,7 @@ RC RelationManager::insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEn
 {
     uint32_t tableId = tablesCatalogEntry->tableId;
 
-    if (fseek(pTablesFile, (sizeof(TablesCatalogHeader) + tableId * sizeof(TablesCatalogEntry)), SEEK_SET))
+    if (fseek(pTablesFile, (sizeof(TablesCatalogHeader) + (tableId * sizeof(TablesCatalogEntry))), SEEK_SET))
         return SEEK_FAILED;
 
     if (fwrite(tablesCatalogEntry, sizeof(TablesCatalogEntry), 1, pTablesFile))
@@ -295,20 +448,26 @@ RC RelationManager::insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEn
 
     return WRITE_FAILED;
 }
-/*
-TablesCatalogEntry RelationManager::getTablesCatalogEntry(void * pTablesFile, uint32_t entryId)
+
+RC RelationManager::getTablesCatalogEntry(FILE * pTablesFile, uint32_t recordOffset, TablesCatalogEntry * tablesCatalogEntry)
 {
-    TablesCatalogEntry tablesCatalogEntry;
+    void * raw = malloc(sizeof(TablesCatalogEntry));
+
+    fseek(pTablesFile, recordOffset, SEEK_SET);
+    if (fread(raw, sizeof(TablesCatalogEntry), 1, pTablesFile) != 1)
+        return READ_FAILED;
+
     memcpy(
-        &tablesCatalogEntry,
-        ((char *)pTablesFile + sizeof(TablesCatalogHeader) + entryId * sizeof(tablesCatalogEntry)),
+        tablesCatalogEntry,
+        raw,
         sizeof(TablesCatalogEntry)
     );
-    return tablesCatalogEntry;
-}
-*/
 
-void  RelationManager::initializeTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader)
+    free(raw);
+    return SUCCESS;
+}
+
+void RelationManager::initializeTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader)
 {
     tablesCatalogHeader->nextTableId = 0;
     tablesCatalogHeader->numOfTables = 0;
@@ -380,13 +539,25 @@ RC RelationManager::insertColumnsCatalogEntry(FILE * pColumnsFile, ColumnsCatalo
 
     return WRITE_FAILED;
 }
-/*
-ColumnsCatalogHeader RelationManager::getColumnsCatalogEntry(void * pColumnsFile)
+
+RC RelationManager::getColumnsCatalogEntry(FILE * pColumnsFile, uint32_t recordOffset, ColumnsCatalogEntry * columnsCatalogEntry)
 {
-	// TBC
-	return -1;
+    void * raw = malloc(sizeof(ColumnsCatalogEntry));
+
+    fseek(pColumnsFile, recordOffset, SEEK_SET);
+    if (fread(raw, sizeof(ColumnsCatalogEntry), 1, pColumnsFile) != 1)
+        return READ_FAILED;
+
+    memcpy(
+        columnsCatalogEntry,
+        raw,
+        sizeof(ColumnsCatalogEntry)
+    );
+
+    free(raw);
+    return SUCCESS;
 }
-*/
+
 
 void RelationManager::initializeColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader)
 {
@@ -428,4 +599,78 @@ RC RelationManager::getColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalo
 
     free(raw);
     return SUCCESS;
+}
+
+//  TBD -- Testing Function 
+void RelationManager::printTableCatalog() {
+    TablesCatalogEntry tempEntry;
+    TablesCatalogHeader tempHeader;
+    void * rawHeader = malloc(sizeof(TablesCatalogHeader));
+    void * rawEntry = malloc(sizeof(TablesCatalogEntry));
+
+    FILE * fTableCatalog = fopen(tablesCatalogName.c_str(), "rb");
+    rewind(fTableCatalog);
+    fread(rawHeader, sizeof(TablesCatalogHeader), 1, fTableCatalog);
+    memcpy(&tempHeader, rawHeader, sizeof(TablesCatalogHeader));
+
+    cout << "===== Header =====" << endl
+    << tempHeader.nextTableId << endl
+    << tempHeader.numOfTables << endl
+    << tempHeader.freeSpaceOffset << endl
+    << "MOD:" << (tempHeader.freeSpaceOffset - sizeof(TablesCatalogHeader)) % sizeof(TablesCatalogEntry) << endl;
+
+    uint32_t offset = sizeof(TablesCatalogHeader);
+    cout << "===== Entry =====" << endl;
+    while (offset < tempHeader.freeSpaceOffset) {
+        fseek(fTableCatalog, offset, SEEK_SET);
+        fread(rawEntry, sizeof(TablesCatalogEntry), 1, fTableCatalog);
+        memcpy(&tempEntry, rawEntry, sizeof(TablesCatalogEntry));
+
+        cout << tempEntry.tableId << endl
+        << tempEntry.tableName << endl
+        << tempEntry.fileName << endl;
+        
+        offset += sizeof(TablesCatalogEntry);
+        cout << "MOD: " << (tempHeader.freeSpaceOffset - offset) % sizeof(TablesCatalogEntry) << endl;
+        
+        cout << "----- next -----" << endl;
+    }
+
+}
+
+void RelationManager::printColumnsCatalog() {
+    ColumnsCatalogEntry tempEntry;
+    ColumnsCatalogHeader tempHeader;
+    void * rawHeader = malloc(sizeof(ColumnsCatalogHeader));
+    void * rawEntry = malloc(sizeof(ColumnsCatalogEntry));
+
+    FILE * fColumnCatalog = fopen(columnsCatalogName.c_str(), "rb");
+    rewind(fColumnCatalog);
+    fread(rawHeader, sizeof(ColumnsCatalogHeader), 1, fColumnCatalog);
+    memcpy(&tempHeader, rawHeader, sizeof(ColumnsCatalogHeader));
+
+    cout << "===== Header =====" << endl
+    << (tempHeader.freeSpaceOffset - sizeof(ColumnsCatalogHeader)) % sizeof(ColumnsCatalogEntry) << endl
+    << tempHeader.freeSpaceOffset << endl
+    << "MOD:" << (tempHeader.freeSpaceOffset - sizeof(ColumnsCatalogHeader)) % sizeof(ColumnsCatalogEntry) << endl;
+;
+
+    uint32_t offset = sizeof(ColumnsCatalogHeader);
+    cout << "===== Entry =====" << endl;
+    while (offset < tempHeader.freeSpaceOffset) {
+        fseek(fColumnCatalog, offset, SEEK_SET);
+        fread(rawEntry, sizeof(ColumnsCatalogEntry), 1, fColumnCatalog);
+        memcpy(&tempEntry, rawEntry, sizeof(ColumnsCatalogEntry));
+
+        cout << tempEntry.tableId << endl
+        << tempEntry.columnName << endl
+        << tempEntry.columnType << endl
+        << tempEntry.columnLength << endl
+        << tempEntry.columnPosition << endl;
+        
+        offset += sizeof(ColumnsCatalogEntry);
+        cout << "MOD:" << (tempHeader.freeSpaceOffset - sizeof(ColumnsCatalogHeader)) % sizeof(ColumnsCatalogEntry) << endl;
+
+        cout << "----- next -----" << endl;
+    }
 }

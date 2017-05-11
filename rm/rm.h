@@ -23,6 +23,8 @@ using namespace std;
 #define WRITE_FAILED 2
 #define INSERT_FAILED 3
 #define READ_FAILED 4
+#define RENAME_FAILED 5
+#define TRANSFER_FAILED 6
 
 // Catalog Tables
 // Tables Catelog
@@ -116,11 +118,13 @@ private:
 
   // ********************** Helper function **********************
   bool fileExists(const string &filename);
+  RC transferTablesCatalogRecoreds(FILE * srcFile, FILE * destFile, string tableName, uint32_t headOffset, uint32_t endOffset, uint32_t sizeOfRecord, uint32_t * count, uint32_t * tableId, string * fileName);
+  RC transferColumnsCatalogRecoreds(FILE * srcFile, FILE * destFile, uint32_t tableId, uint32_t headOffset, uint32_t endOffset, uint32_t sizeOfRecord, uint32_t * count);
 
   // TablesCatalogEntry
   void updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, uint32_t tableId, string tableName, string fileName);
   RC insertTablesCatalogEntry(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntry);
-  //TablesCatalogEntry getTablesCatalogEntry(void * pTablesFile, uint32_t entryId);
+  RC getTablesCatalogEntry(FILE * pTablesFile, uint32_t recordOffset, TablesCatalogEntry * tablesCatalogEntry);
 
   // TablesCatalogHeader
   void  initializeTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader);
@@ -131,13 +135,17 @@ private:
   // ColumnsCatalogEntry
   void updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, uint32_t tableId, string columnName, AttrType columnType, uint32_t columnLength, uint32_t columnPosition);
   RC insertColumnsCatalogEntry(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntry, ColumnsCatalogHeader * columnsCatalogHeader);
-  //TablesCatalogHeader getColumnsCatalogEntry(void * pTablesFile);
+  RC getColumnsCatalogEntry(FILE * pColumnsFile, uint32_t recordOffset, ColumnsCatalogEntry * columnsCatalogEntry);
 
   // ColumnsCatalogHeader
   void initializeColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
   void updateColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
   RC insertColumnsCatalogHeader(FILE * pColumnsFile, ColumnsCatalogHeader * columnsCatalogHeader);
   RC getColumnsCatalogHeader(ColumnsCatalogHeader * columnCatalogHeader, FILE * pColumnsFile);
+public:
+  //  TBD -- Testing Function 
+  void printTableCatalog();
+  void printColumnsCatalog();
 };
 
 #endif
