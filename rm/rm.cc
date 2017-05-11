@@ -298,7 +298,78 @@ RC RelationManager::deleteTable(const string &tableName)
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
-    return -1;
+    // check if catalogs file exists
+    if (!fileExists(tablesCatalogName))
+        return FILE_DOES_NOT_EXIST;
+
+    if (!fileExists(columnsCatalogName))
+        return FILE_DOES_NOT_EXIST;
+
+    // Read table catalog from disk
+    FILE * pTablesFile = fopen(tablesCatalogName.c_str(), "rb");
+    TablesCatalogHeader tempTablesCatalogHeader;
+    if (getTablesCatalogHeader(&tempTablesCatalogHeader, pTablesFile))
+        return READ_FAILED;
+    
+    // Get tableId and fileName from the catalogs on disk
+    uint32_t count = 0;                             // number of deleted records
+    uint32_t offset = sizeof(TablesCatalogHeader);  // offset start from the beginning of the first record in tables catalog
+    uint32_t tableId;
+    string fileName;
+    TablesCatalogEntry tempTablesCatalogEntry;
+    
+    while (offset < tempTablesCatalogHeader.freeSpaceOffset){
+        // record record from the file on disk
+        if (getTablesCatalogEntry(pTablesFile, offset, &tempTablesCatalogEntry))
+            return READ_FAILED;
+        
+        // get the the record id and file name that corresponding to the table
+        if (tableName.compare(tempTablesCatalogEntry.tableName) == 0)
+        {
+            count += 1;
+            tableId = tempTablesCatalogEntry.tableId;
+            fileName = tempTablesCatalogEntry.fileName;
+            break;
+        }
+
+        offset += sizeof(TablesCatalogEntry);
+    }
+
+    // Check if the RBF file exists
+    if (count == 0) {
+        fclose(pTablesFile);
+        return FILE_DOES_NOT_EXIST;
+    }
+
+    // Read columns catalog from disk
+    FILE * pColumnsFile = fopen(columnsCatalogName.c_str() , "rb");
+    ColumnsCatalogHeader tempColumnsCatalogHeader;
+    if (getColumnsCatalogHeader(&tempColumnsCatalogHeader, pColumnsFile))
+        return READ_FAILED;
+
+    // Read columns attribute
+    ColumnsCatalogEntry tempColumnsCatalogEntry;
+    Attribute tempAttr;
+    offset = sizeof(ColumnsCatalogHeader);
+    while (offset < tempColumnsCatalogHeader.freeSpaceOffset)
+    {
+        // read attribute from columns catalog on disk
+        if (getColumnsCatalogEntry(pColumnsFile, offset, &tempColumnsCatalogEntry))
+            return READ_FAILED;
+
+        // find the target attributes
+        if (tableId == tempColumnsCatalogEntry.tableId)
+        {
+            tempAttr.name = tempColumnsCatalogEntry.columnName;
+            tempAttr.type = tempColumnsCatalogEntry.columnType;
+            tempAttr.length = tempColumnsCatalogEntry.columnLength;
+            attrs.push_back(tempAttr);
+        }
+
+        offset += sizeof(ColumnsCatalogEntry);
+    }
+
+    return SUCCESS;
 }
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
