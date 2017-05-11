@@ -762,10 +762,14 @@ int RBFTest_11(RecordBasedFileManager *rbfm){
 
   RID rid;
   RID rid2;
+  RID rid3;
   int recordSize = 0;
   void *record = malloc(100);
   void *record2 = malloc(100);
+  void *record3 = malloc(100);
   void *returnedData = malloc(100);
+  void *returnedData2 = malloc(100);
+  void *returnedData3 = malloc(100);
 
   vector<Attribute> recordDescriptor;
   createRecordDescriptor(recordDescriptor);
@@ -776,41 +780,49 @@ int RBFTest_11(RecordBasedFileManager *rbfm){
   memset(nullsIndicator, 0, nullFieldsIndicatorActualSize);
 
   // Insert a record into a file and print the record
-  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "Anteater", 25, 177.8, 6200, record, &recordSize);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "Anteater", 27, 177.8, 6200, record, &recordSize);
   prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "Anteater", 79, 177.8, 6200, record2, &recordSize);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "Anteater", 85, 177.8, 6200, record3, &recordSize);
   cout << endl << "Inserting Data:" << endl;
   //rbfm->printRecord(recordDescriptor, record);
   //rbfm->printRecord(recordDescriptor, record2);
 
   rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
   rc = rbfm->insertRecord(fileHandle, recordDescriptor, record2, rid2);
-  cout<< "post insert rid: "<<rid.pageNum<< " "<< rid.slotNum<<endl;
+  rc = rbfm->insertRecord(fileHandle, recordDescriptor, record3, rid3);
+//  cout<< "post insert rid: "<<rid.pageNum<< " "<< rid.slotNum<<endl;
   assert(rc == success && "Inserting a record should not fail.");
 
-  // Given the rid, read the record from file
-  //rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
-  //assert(rc == success && "Reading a record should not fail.");
+  //rc = rbfm->deleteRecord(fileHandle,recordDescriptor,rid);
+  rc = rbfm->deleteRecord(fileHandle,recordDescriptor,rid2);
+  //rc = rbfm->deleteRecord(fileHandle,recordDescriptor,rid3);
 
-  //cout << endl << "Returned Data:" << endl;
-  //rbfm->printRecord(recordDescriptor, returnedData);
-
-  rc = rbfm->deleteRecord(fileHandle,recordDescriptor,rid);
   assert(rc == success && "Delting the file should not fail.");
-  cout<< "reading from deleted\n";
+//  cout<< "reading from deleted\n";
   rc = rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
+  //rc = rbfm->readRecord(fileHandle, recordDescriptor, rid2, returnedData2);
+  rc = rbfm->readRecord(fileHandle, recordDescriptor, rid3, returnedData3);
+
   if (rc == RBFM_INVALID_RID)
     cout<< "recognized dead\n";
 
-  //rc = rbfm->printRecord(recordDescriptor,returnedData);
+  rc = rbfm->printRecord(recordDescriptor,returnedData);
+  //rc = rbfm->printRecord(recordDescriptor,returnedData2);
+  rc = rbfm->printRecord(recordDescriptor,returnedData3);
+
   //assert(rc != success && "reading deleted record should fail");
-  cout<< "pre close/ destroy\n";
+//  cout<< "pre close/ destroy\n";
   rc = rbfm->closeFile(fileHandle);
   rc = rbfm->destroyFile(fileName);
-  cout<< "post close/ destroy\n";
+//  cout<< "post close/ destroy\n";
   free(record);
   free(record2);
+  free(record3);
   free(returnedData);
-  cout<< "freeing stuff\n";
+  free(returnedData2);
+  free(returnedData3);
+  cout<<"deleted a record sucess\n";
+//  cout<< "freeing stuff\n";
   return 0;
 }
 
@@ -850,5 +862,6 @@ int main()
     RBFTest_10(rbfm);
     cout<< "-----testing part 2 functions-------\n";
     RBFTest_11(rbfm);
+    cout<< "------testing update--------\n";
     return 0;
 }
