@@ -493,7 +493,34 @@ RC RelationManager::printTuple(const vector<Attribute> &attrs, const void *data)
 
 RC RelationManager::readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data)
 {
-    return -1;
+    TablesCatalogEntry tempTablesCatalogEntry;
+    string fileName;
+    
+    // check if the table and the file of table exist
+    if (getTableInfoByTableName(tableName, &tempTablesCatalogEntry))
+        return TABLE_DOES_NOT_EXIST;
+
+    fileName = tempTablesCatalogEntry.fileName;
+    if (!fileExists(fileName))
+        return FILE_DOES_NOT_EXIST;
+
+    // open table file
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    FileHandle fileHandle;
+    _rbfm->openFile(fileName, fileHandle);
+    
+    // get tuple attributes from catalogs
+    vector<Attribute> tupleAttrs;
+    if (getAttributes(fileName, tupleAttrs))
+        return READ_FAILED;
+
+    // insert tuple
+    if (_rbfm->readAttribute(fileHandle, tupleAttrs, rid, attributeName, data))
+        return READ_FAILED;
+
+    // TBC -- free _rbfm??
+
+    return SUCCESS;
 }
 
 RC RelationManager::scan(const string &tableName,
