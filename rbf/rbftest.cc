@@ -839,8 +839,10 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
   RID rid2;
   RID rid3;
   int recordSize = 0;
+  int recordSize2 = 0;
+  //int recordSize3 = 0;
   void *record = malloc(100);
-  void *record2 = malloc(100-3);
+  void *record2 = malloc(100);
   void *record3 = malloc(100);
   void *returnedData = malloc(100);
   void *returnedData2 = malloc(100);
@@ -854,16 +856,20 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
   memset(nullsIndicator, 0, nullFieldsIndicatorActualSize);
 
   // Insert a record into a file and print the record
-  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "preupdat", 27, 177.8, 6200, record, &recordSize);
-  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "short", 79, 177.8, 6200, record2, &recordSize);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 9, "preupdate", 27, 177.8, 6200, record, &recordSize);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 9, "short", 79, 177.8, 6200, record2, &recordSize2);
+  cout<< "test 12 record sizes "<< recordSize<< " "<< recordSize2<<endl;
 
   rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
   rc = rbfm->printRecord(recordDescriptor, record);
+  rc = rbfm->printRecord(recordDescriptor, record2);
 
 //  rc = rbfm->deleteRecord(fileHandle, recordDescriptor,rid);
   rc = rbfm->updateRecord(fileHandle,recordDescriptor,record2,rid);
+  
+  cout<< "after update\n";
   rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
-    rc = rbfm->printRecord(recordDescriptor, returnedData);
+  rc = rbfm->printRecord(recordDescriptor, returnedData);
 
   rc = rbfm->closeFile(fileHandle);
   rc = rbfm->destroyFile(fileName);
