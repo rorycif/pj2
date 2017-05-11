@@ -826,6 +826,56 @@ int RBFTest_11(RecordBasedFileManager *rbfm){
   return 0;
 }
 
+int RBFTest_12(RecordBasedFileManager * rbfm){
+  cout<< "in test 12: single update\n";
+  FileHandle fileHandle;
+  string fileName = "test12";
+  unsigned rc;
+  rc = rbfm->createFile(fileName);
+  rc = rbfm->openFile(fileName, fileHandle);
+  assert(rc == success && "Opening the file should not fail.");
+
+  RID rid;
+  RID rid2;
+  RID rid3;
+  int recordSize = 0;
+  void *record = malloc(100);
+  void *record2 = malloc(100-3);
+  void *record3 = malloc(100);
+  void *returnedData = malloc(100);
+  void *returnedData2 = malloc(100);
+  void *returnedData3 = malloc(100);
+
+  vector<Attribute> recordDescriptor;
+  createRecordDescriptor(recordDescriptor);
+
+  int nullFieldsIndicatorActualSize = getActualByteForNullsIndicator(recordDescriptor.size());
+  unsigned char *nullsIndicator = (unsigned char *) malloc(nullFieldsIndicatorActualSize);
+  memset(nullsIndicator, 0, nullFieldsIndicatorActualSize);
+
+  // Insert a record into a file and print the record
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "preupdat", 27, 177.8, 6200, record, &recordSize);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 8, "short", 79, 177.8, 6200, record2, &recordSize);
+
+  rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
+  rc = rbfm->printRecord(recordDescriptor, record);
+
+//  rc = rbfm->deleteRecord(fileHandle, recordDescriptor,rid);
+  rc = rbfm->updateRecord(fileHandle,recordDescriptor,record2,rid);
+  rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
+    rc = rbfm->printRecord(recordDescriptor, returnedData);
+
+  rc = rbfm->closeFile(fileHandle);
+  rc = rbfm->destroyFile(fileName);
+  free(record);
+  free(record2);
+  free(record3);
+  free(returnedData);
+  free(returnedData2);
+  free(returnedData3);
+  return 0;
+}
+
 int main()
 {
     // To test the functionality of the paged file manager
@@ -862,6 +912,7 @@ int main()
     RBFTest_10(rbfm);
     cout<< "-----testing part 2 functions-------\n";
     RBFTest_11(rbfm);
-    cout<< "------testing update--------\n";
+    RBFTest_12(rbfm);
+
     return 0;
 }

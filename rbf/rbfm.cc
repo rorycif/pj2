@@ -269,6 +269,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 }
 
 RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid){
+    cout<< "in update\n";
     if (fileHandle.getNumberOfPages() < rid.pageNum){       //correct page error check
         return RBFM_PAGE_DN_EXIST;
     }
@@ -280,11 +281,13 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData, rid.slotNum);    //get record entry
     switch (tempRecordEntry.statFlag) {
         case dead:
+            cout<< "dead\n";
             free(pageData);
             return RBFM_CANT_UPDATE;
             break;
 
         case moved:
+            cout<< "moved\n";
             free(pageData);
             return updateRecord(fileHandle,recordDescriptor,data,tempRecordEntry.forwardAddress);
             break;
