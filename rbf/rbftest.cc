@@ -857,7 +857,7 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
 
   // Insert a record into a file and print the record
   prepareRecord(recordDescriptor.size(), nullsIndicator, 9, "preupdate", 27, 177.8, 6200, record, &recordSize);
-  prepareRecord(recordDescriptor.size(), nullsIndicator, 5, "short", 79, 177.8, 6200, record2, &recordSize2);
+  prepareRecord(recordDescriptor.size(), nullsIndicator, 20, "a new long record", 79, 177.8, 6200, record2, &recordSize2);
   cout<< "test 12 record sizes "<< recordSize<< " "<< recordSize2<<endl;
 
   rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
@@ -866,7 +866,7 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
 
 //  rc = rbfm->deleteRecord(fileHandle, recordDescriptor,rid);
   rc = rbfm->updateRecord(fileHandle,recordDescriptor,record2,rid);
-  
+
   cout<< "after update\n";
   rbfm->readRecord(fileHandle, recordDescriptor, rid, returnedData);
   rc = rbfm->printRecord(recordDescriptor, returnedData);

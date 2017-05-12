@@ -302,30 +302,39 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 				return SUCCESS;
             }
             else if(size < tempRecordEntry.length){     //smaller size so compact
-				void * atNewOffset = malloc(size);
-				printRecord (recordDescriptor, data);
                 setRecordAtOffset(pageData, tempRecordEntry.offset, recordDescriptor, data);
-				//fileHandle.writePage(rid.pageNum, pageData);
-				//cout<< "previous offset "<<tempRecordEntry.offset<<endl;
                 compaction(pageData, tempHeader, tempRecordEntry, tempRecordEntry.length - size, rid.slotNum);
-				tempRecordEntry = getSlotDirectoryRecordEntry(pageData,rid.slotNum);
-				//cout<< "new offset "<< tempRecordEntry.offset<<endl;
+				        tempRecordEntry = getSlotDirectoryRecordEntry(pageData,rid.slotNum);
                 fileHandle.writePage(rid.pageNum, pageData);
-				getRecordAtOffset(pageData,tempRecordEntry.offset,recordDescriptor,atNewOffset);
-				//printRecord(recordDescriptor,atNewOffset);
-				free(atNewOffset);
                 free(pageData);
                 return SUCCESS;
             }
             else{       //record is now bigger
+                cout<< "record is bigger so expand "<< size <<" > "<< tempRecordEntry.length<<endl;
                 deleteRecord(fileHandle,recordDescriptor, rid);     //clear space
                 tempRecordEntry.statFlag = moved;
+                cout<< "deleted record\n";
+                cout<< "prev rid: "<<rid.pageNum<< " "<<rid.slotNum<<endl;
+                cout<< "prev offset: "<< tempRecordEntry.offset<<endl;
                 if (insertRecord(fileHandle, recordDescriptor, data, tempRecordEntry.forwardAddress)){
                   free(pageData);
                   return RBFM_UPDATE_FAIL;
                 }
+                fileHandle.readPage(tempRecordEntry.forwardAddress.pageNum,pageData);
                 setSlotDirectoryRecordEntry(pageData, rid.slotNum, tempRecordEntry);    //update forwardAddress
+                fileHandle.writePage(rid.pageNum, pageData);
+                fileHandle.readPage(tempRecordEntry.forwardAddress.pageNum,pageData);
+                tempHeader = getSlotDirectoryHeader(pageData);
+                cout<<tempHeader.recordEntriesNumber<< " this many entries\n";
+                cout<< "post rid: "<<tempRecordEntry.forwardAddress.pageNum<< " "<<tempRecordEntry.forwardAddress.slotNum<<endl;
+                tempRecordEntry = getSlotDirectoryRecordEntry(pageData,tempRecordEntry.forwardAddress.slotNum);
+                cout<< "post offset: "<< tempRecordEntry.offset<<endl;
+                void * returned = malloc(size);
+                cout<<"made it here\n";
+                getRecordAtOffset(pageData,tempRecordEntry.offset,recordDescriptor,returned);
+                printRecord(recordDescriptor,returned);
                 free(pageData);
+                free(returned);
                 return SUCCESS;
             }
             break;
