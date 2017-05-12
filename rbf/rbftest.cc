@@ -884,6 +884,13 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
 
 int RBFTest_13(RecordBasedFileManager * rbfm){
     cout<< "---------in test 13 get attribute test-----------\n";
+    
+    return 0;
+}
+
+int RBFTest_14(RecordBasedFileManager * RBFM){
+    cout<< "------------in test 14 scan iterator test------------\n";
+    
     return 0;
 }
 
@@ -924,6 +931,7 @@ int main()
     cout<< "-----testing part 2 functions-------\n";
     RBFTest_11(rbfm);
     RBFTest_12(rbfm);
-    
+    RBFTest_13(rbfm);
+    RBFTest_14(rbfm);
     return 0;
 }

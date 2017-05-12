@@ -461,6 +461,14 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
     return RBFM_SLOT_DN_EXIST;
   }
   SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData,rid.slotNum);
+/*    if (tempRecordEntry.forwardAddress.pageNum ||tempRecordEntry.forwardAddress.slotNum){       //moved
+        free(pageData);
+        return readAttribute(fileHandle,recordDescriptor,rid,attributeName,data);
+    }
+    if(tempRecordEntry.statFlag == dead){
+        free(pageData);
+        return RBFM_INVALID_RID;
+    }*/
 
   //validate that attribute exist
   bool found = false;
