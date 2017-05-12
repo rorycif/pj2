@@ -150,19 +150,29 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 
     // Gets the slot directory record entry data
     SlotDirectoryRecordEntry recordEntry = getSlotDirectoryRecordEntry(pageData, rid.slotNum);
-
-    //cannot return something that is dead or moved
-    if (recordEntry.statFlag == dead || recordEntry.statFlag == moved){
-      free(pageData);
-      return RBFM_INVALID_RID;
+    switch (recordEntry.statFlag) {
+        case dead:          //reading a dead record
+        {
+            free(pageData);
+            return RBFM_INVALID_RID;
+            break;
+        }
+        case alive:
+        {
+            getRecordAtOffset(pageData, recordEntry.offset, recordDescriptor, data);
+            free(pageData);
+            return SUCCESS;
+            break;
+        }
+        case moved:     //find it in foward address
+        {
+            free(pageData);
+            return readRecord(fileHandle,recordDescriptor,recordEntry.forwardAddress,data);
+            break;
+        }
+            
     }
-
-
-    // Retrieve the actual entry data
-    getRecordAtOffset(pageData, recordEntry.offset, recordDescriptor, data);
-
-    free(pageData);
-    return SUCCESS;
+    return RBFM_READ_FAILED;        //should not get here
 }
 
 RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data)
@@ -313,9 +323,6 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
                 cout<< "record is bigger so expand "<< size <<" > "<< tempRecordEntry.length<<endl;
                 deleteRecord(fileHandle,recordDescriptor, rid);     //clear space
                 tempRecordEntry.statFlag = moved;
-                cout<< "deleted record\n";
-                cout<< "prev rid: "<<rid.pageNum<< " "<<rid.slotNum<<endl;
-                cout<< "prev offset: "<< tempRecordEntry.offset<<endl;
                 if (insertRecord(fileHandle, recordDescriptor, data, tempRecordEntry.forwardAddress)){
                   free(pageData);
                   return RBFM_UPDATE_FAIL;
@@ -323,7 +330,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
                 fileHandle.readPage(tempRecordEntry.forwardAddress.pageNum,pageData);
                 setSlotDirectoryRecordEntry(pageData, rid.slotNum, tempRecordEntry);    //update forwardAddress
                 fileHandle.writePage(rid.pageNum, pageData);
-                fileHandle.readPage(tempRecordEntry.forwardAddress.pageNum,pageData);
+/*                fileHandle.readPage(tempRecordEntry.forwardAddress.pageNum,pageData);
                 tempHeader = getSlotDirectoryHeader(pageData);
                 cout<<tempHeader.recordEntriesNumber<< " this many entries\n";
                 cout<< "post rid: "<<tempRecordEntry.forwardAddress.pageNum<< " "<<tempRecordEntry.forwardAddress.slotNum<<endl;
@@ -333,8 +340,9 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
                 cout<<"made it here\n";
                 getRecordAtOffset(pageData,tempRecordEntry.offset,recordDescriptor,returned);
                 printRecord(recordDescriptor,returned);
+                free(returned);*/
                 free(pageData);
-                free(returned);
+
                 return SUCCESS;
             }
             break;
