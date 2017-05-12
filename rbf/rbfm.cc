@@ -454,6 +454,7 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
   void * pageData = malloc(PAGE_SIZE);
 
   //slot validation
+    fileHandle.readPage(rid.pageNum,pageData);
   SlotDirectoryHeader tempHeader = getSlotDirectoryHeader(pageData);
   if (rid.slotNum >= tempHeader.recordEntriesNumber){
     free(pageData);

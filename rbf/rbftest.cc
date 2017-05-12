@@ -882,10 +882,15 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
   return 0;
 }
 
+int RBFTest_13(RecordBasedFileManager * rbfm){
+    cout<< "---------in test 13 get attribute test-----------\n";
+    return 0;
+}
+
 int main()
 {
     // To test the functionality of the paged file manager
-    PagedFileManager *pfm = PagedFileManager::instance();
+    //PagedFileManager *pfm = PagedFileManager::instance();
 
     // To test the functionality of the record-based file manager
     RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
@@ -902,7 +907,7 @@ int main()
     remove("test9rids");
     remove("test9sizes");
 
-    RBFTest_1(pfm);
+    /*RBFTest_1(pfm);
     RBFTest_2(pfm);
     RBFTest_3(pfm);
     RBFTest_4(pfm);
@@ -915,10 +920,10 @@ int main()
     vector<RID> rids;
     vector<int> sizes;
     RBFTest_9(rbfm, rids, sizes);
-    RBFTest_10(rbfm);
+    RBFTest_10(rbfm);*/
     cout<< "-----testing part 2 functions-------\n";
     RBFTest_11(rbfm);
     RBFTest_12(rbfm);
-
+    
     return 0;
 }
