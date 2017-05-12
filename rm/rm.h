@@ -26,6 +26,7 @@ using namespace std;
 #define TRANSFER_FAILED 6
 #define DELETE_FAILED 7
 #define TABLE_DOES_NOT_EXIST 8
+#define UPDATE_FAILED 9
 
 // Catalog Tables
 // Tables Catelog

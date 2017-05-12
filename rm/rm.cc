@@ -377,7 +377,8 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
         return READ_FAILED;
 
     // insert tuple
-    _rbfm->insertRecord(fileHandle, tupleAttrs, data, rid);
+    if (_rbfm->insertRecord(fileHandle, tupleAttrs, data, rid))
+        return INSERT_FAILED;
 
     // TBC -- free _rbfm??
 
@@ -386,27 +387,140 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 {
-    return -1;
+    TablesCatalogEntry tempTablesCatalogEntry;
+    string fileName;
+    
+    // check if the table and the file of table exist
+    if (getTableInfoByTableName(tableName, &tempTablesCatalogEntry))
+        return TABLE_DOES_NOT_EXIST;
+
+    fileName = tempTablesCatalogEntry.fileName;
+    if (!fileExists(fileName))
+        return FILE_DOES_NOT_EXIST;
+
+    // open table file
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    FileHandle fileHandle;
+    _rbfm->openFile(fileName, fileHandle);
+    
+    // get tuple attributes from catalogs
+    vector<Attribute> tupleAttrs;
+    if (getAttributes(fileName, tupleAttrs))
+        return READ_FAILED;
+
+    // delete tuple
+    if (_rbfm->deleteRecord(fileHandle, tupleAttrs, rid))
+        return DELETE_FAILED;
+
+    // TBC -- free _rbfm??
+
+    return SUCCESS;
 }
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
 {
-    return -1;
+    TablesCatalogEntry tempTablesCatalogEntry;
+    string fileName;
+    
+    // check if the table and the file of table exist
+    if (getTableInfoByTableName(tableName, &tempTablesCatalogEntry))
+        return TABLE_DOES_NOT_EXIST;
+
+    fileName = tempTablesCatalogEntry.fileName;
+    if (!fileExists(fileName))
+        return FILE_DOES_NOT_EXIST;
+
+    // open table file
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    FileHandle fileHandle;
+    _rbfm->openFile(fileName, fileHandle);
+    
+    // get tuple attributes from catalogs
+    vector<Attribute> tupleAttrs;
+    if (getAttributes(fileName, tupleAttrs))
+        return READ_FAILED;
+
+    // delete tuple
+    if (_rbfm->updateRecord(fileHandle, tupleAttrs, data, rid))
+        return UPDATE_FAILED;
+
+    // TBC -- free _rbfm??
+
+    return SUCCESS;
 }
 
 RC RelationManager::readTuple(const string &tableName, const RID &rid, void *data)
 {
-    return -1;
+    TablesCatalogEntry tempTablesCatalogEntry;
+    string fileName;
+    
+    // check if the table and the file of table exist
+    if (getTableInfoByTableName(tableName, &tempTablesCatalogEntry))
+        return TABLE_DOES_NOT_EXIST;
+
+    fileName = tempTablesCatalogEntry.fileName;
+    if (!fileExists(fileName))
+        return FILE_DOES_NOT_EXIST;
+
+    // open table file
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    FileHandle fileHandle;
+    _rbfm->openFile(fileName, fileHandle);
+    
+    // get tuple attributes from catalogs
+    vector<Attribute> tupleAttrs;
+    if (getAttributes(fileName, tupleAttrs))
+        return READ_FAILED;
+
+    // insert tuple
+    if (_rbfm->readRecord(fileHandle, tupleAttrs, rid, data))
+        return READ_FAILED;
+
+    // TBC -- free _rbfm??
+
+    return SUCCESS;
 }
 
 RC RelationManager::printTuple(const vector<Attribute> &attrs, const void *data)
 {
-	return -1;
+	RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    _rbfm->printRecord(attrs, data);
+
+    // TBC -- free _rbfm??
+
+    return SUCCESS;
 }
 
 RC RelationManager::readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data)
 {
-    return -1;
+    TablesCatalogEntry tempTablesCatalogEntry;
+    string fileName;
+    
+    // check if the table and the file of table exist
+    if (getTableInfoByTableName(tableName, &tempTablesCatalogEntry))
+        return TABLE_DOES_NOT_EXIST;
+
+    fileName = tempTablesCatalogEntry.fileName;
+    if (!fileExists(fileName))
+        return FILE_DOES_NOT_EXIST;
+
+    // open table file
+    RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+    FileHandle fileHandle;
+    _rbfm->openFile(fileName, fileHandle);
+    
+    // get tuple attributes from catalogs
+    vector<Attribute> tupleAttrs;
+    if (getAttributes(fileName, tupleAttrs))
+        return READ_FAILED;
+
+    // insert tuple
+    if (_rbfm->readAttribute(fileHandle, tupleAttrs, rid, attributeName, data))
+        return READ_FAILED;
+
+    // TBC -- free _rbfm??
+
+    return SUCCESS;
 }
 
 RC RelationManager::scan(const string &tableName,
