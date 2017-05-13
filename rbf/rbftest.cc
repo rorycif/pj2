@@ -879,18 +879,85 @@ int RBFTest_12(RecordBasedFileManager * rbfm){
   free(returnedData);
   free(returnedData2);
   free(returnedData3);
+  free(nullsIndicator);
   return 0;
 }
 
 int RBFTest_13(RecordBasedFileManager * rbfm){
     cout<< "---------in test 13 get attribute test-----------\n";
-    
+    FileHandle fileHandle;
+    string fileName = "test13";
+    unsigned rc;
+    rc = rbfm->createFile(fileName);
+    rc = rbfm->openFile(fileName, fileHandle);
+    assert(rc == success && "Opening the file should not fail.");
+    cout<< "opened file\n";
+    RID rid;
+
+    int recordSize = 0;
+    vector<Attribute> recordDescriptor;
+    createRecordDescriptor(recordDescriptor);
+    string attributeName = "";
+    void *record = malloc(100);
+    void *returnedData = malloc(100);
+    int nullFieldsIndicatorActualSize = getActualByteForNullsIndicator(recordDescriptor.size());
+    unsigned char *nullsIndicator = (unsigned char *) malloc(nullFieldsIndicatorActualSize);
+    memset(nullsIndicator, 0, nullFieldsIndicatorActualSize);
+
+    prepareRecord(recordDescriptor.size(), nullsIndicator, 9, "read___me", 27, 177.8, 6200, record, &recordSize);
+
+    cout<< "record descriptor size: "<< recordDescriptor.size()<<endl;
+    rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
+    rc = rbfm->printRecord(recordDescriptor, record);
+    cout<< "getting this attribute: "<< recordDescriptor[0].name<<endl;
+    rc = rbfm-> readAttribute(fileHandle,recordDescriptor ,rid, recordDescriptor[0].name, returnedData);
+    //var char check
+
+    int * size = (int *)returnedData;
+    int length = size[0];
+    char * casted = (char *)returnedData;
+    casted += INT_SIZE;
+    cout<< "inside attr length "<< size[0]<<endl;
+    for (int i =0; i < length; i ++)
+      cout<< casted[i];
+    cout<<endl;
+    cout<< "read return value = "<< rc<<endl;
+
+    //int check
+//    int * check = (int *)returnedData;
+//    cout<< "read attribute int = "<< check[0]<<endl;
+
+    //real check
+//    float * check = (float *)returnedData;
+//    cout<< "read attribute int = "<< check[0]<<endl;
+
+/*    char* null = "NULL";
+    int * cast = (int*)null;
+    float * cast2 = (float *)null;
+    cout<< "null int value: "<< cast[0]<< " null real value: "<< cast2[0]<<endl;*/
+    rc = rbfm->closeFile(fileHandle);
+    rc = rbfm->destroyFile(fileName);
+    free(record);
+    free(returnedData);
     return 0;
 }
 
-int RBFTest_14(RecordBasedFileManager * RBFM){
+int RBFTest_14(RecordBasedFileManager * rbfm){
     cout<< "------------in test 14 scan iterator test------------\n";
-    
+    FileHandle fileHandle;
+    string fileName = "test12";
+    unsigned rc;
+    rc = rbfm->createFile(fileName);
+    rc = rbfm->openFile(fileName, fileHandle);
+    assert(rc == success && "Opening the file should not fail.");
+
+    RID rid;
+
+    rc = rbfm->closeFile(fileHandle);
+    rc = rbfm->destroyFile(fileName);
+//    free(record);
+//    free(returnedData);
+//    free(nullsIndicator);
     return 0;
 }
 

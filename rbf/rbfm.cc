@@ -170,7 +170,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
             return readRecord(fileHandle,recordDescriptor,recordEntry.forwardAddress,data);
             break;
         }
-            
+
     }
     return RBFM_READ_FAILED;        //should not get here
 }
@@ -452,76 +452,101 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
   if (rid.pageNum >= fileHandle.getNumberOfPages())
     return RBFM_PAGE_DN_EXIST;
   void * pageData = malloc(PAGE_SIZE);
-
-  //slot validation
-    fileHandle.readPage(rid.pageNum,pageData);
+  fileHandle.readPage(rid.pageNum, pageData);
   SlotDirectoryHeader tempHeader = getSlotDirectoryHeader(pageData);
-  if (rid.slotNum >= tempHeader.recordEntriesNumber){
-    free(pageData);
-    return RBFM_SLOT_DN_EXIST;
-  }
-  SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData,rid.slotNum);
-/*    if (tempRecordEntry.forwardAddress.pageNum ||tempRecordEntry.forwardAddress.slotNum){       //moved
-        free(pageData);
-        return readAttribute(fileHandle,recordDescriptor,rid,attributeName,data);
-    }
-    if(tempRecordEntry.statFlag == dead){
-        free(pageData);
-        return RBFM_INVALID_RID;
-    }*/
-
-  //validate that attribute exist
+  //attribute type validation
   bool found = false;
-  AttrType targetType;
-  for (unsigned i =0; i< recordDescriptor.size(); i++){
+  unsigned AttPos =0;
+  for (unsigned i =0; i < recordDescriptor.size(); i++){
     if (recordDescriptor[i].name == attributeName){
-      targetType = recordDescriptor[i].type;
       found = true;
+      AttPos = i;
     }
   }
-  if (!found){
-    free(pageData);
-    return RBFM_ATTRIBUTE_DN_EXIST;
-  }
-
-  //get record
-  void * recordCast = malloc(tempRecordEntry.length);       //where entire record is fetched to
-    char * record = (char *)recordCast;
-  getRecordAtOffset(pageData, tempRecordEntry.offset, recordDescriptor, record);
-  unsigned start = getAttributeOffset(record, recordDescriptor, attributeName); //where attribute begins
-  record += start;
-  switch (targetType) {
-    case TypeReal:
-      {
-      float * fcast = (float*)record;
-      float resultReal = fcast[0];
-      memcpy(data,&resultReal, REAL_SIZE);      //set real attibute
-      break;
-    }
-    case TypeInt:
-      {
-      int * icast = (int*)record;
-      int  resultInt = icast[0];
-      memcpy(data,&resultInt, INT_SIZE);
-      break;
-    }
-    case TypeVarChar:
-      {
-      int * scast = (int*)record;
-      int varSize = scast[0]; //size of string
-      record += INT_SIZE;
-      char * vcCast = (char*)record;
-      string result = "";     //string for total varchar
-      for (int i =0; i < varSize; i++){
-        result += vcCast[0];                //concatinate result
-        vcCast += VARCHAR_LENGTH_SIZE;      //move to next character
+  if(!found)
+    return RBFM_INVALID_ATTRIBUTE;
+  //slot validation
+  if (rid.slotNum > tempHeader.recordEntriesNumber)
+    return RBFM_SLOT_DN_EXIST;
+  //stat flag validation
+  SlotDirectoryRecordEntry tempRecordEntry = getSlotDirectoryRecordEntry(pageData,rid.slotNum);
+  switch (tempRecordEntry.statFlag) {
+    case alive:     //return the attribute
+    {
+      cout<< "alive slot\n";
+      void * fullRecord = malloc(tempRecordEntry.length);
+      unsigned attributeOffset =0;
+      if (readRecord(fileHandle,recordDescriptor,rid,fullRecord))     //reading record shoudl work
+        return RBFM_READ_FAILED;
+      cout<< "verify record\n";
+      if (fieldIsNull((char*)fullRecord, AttPos)){   //return null string
+        string out = "NULL";
+        char * ptr = &out[0u];
+        memcpy(data, &out, 4);
+        free(fullRecord);
+        free(pageData);
+        return SUCCESS;
       }
-      memcpy(data, &result, varSize);
+      printRecord(recordDescriptor, fullRecord);
+      char * record = (char *) fullRecord;
+      attributeOffset = getAttributeOffset(fullRecord, recordDescriptor, attributeName);
+      cout<< "offset "<<attributeOffset<<endl;
+      record += attributeOffset;          //move to position of record;
+      switch (recordDescriptor[AttPos].type) {
+        case TypeInt:
+        {
+          cout<< "type int\n";
+          int * tempInt = (int *)record;      //cast
+          int value = tempInt[0];
+          memcpy(data, &value, INT_SIZE);
+          break;
+        }
+        case TypeReal:
+        {
+          cout<< "type real\n";
+          float * tempFloat = (float *)record;
+          memcpy(data, &tempFloat[0], REAL_SIZE);
+          break;
+        }
+        case TypeVarChar:
+        {
+          cout<< "type var char\n";
+          int * cast = (int *)record;     //casting for size
+          int size = cast[0];
+          record += INT_SIZE;
+          string out = "";
+          for (int i =0; i < size; i++){      //concating string
+            out += record[0];
+            record += 1;
+          }
+          char* ptr = &out[0u];
+          memcpy(data, &size, INT_SIZE);        //add the size of return value
+          memcpy(data + INT_SIZE, ptr, size);   //add the actual data
+          break;
+        }
+      }
+
+      free(pageData);
+      free(fullRecord);
+      return SUCCESS;
+      break;
+    }
+    case dead:      //error
+    {
+      cout<< "dead slot\n";
+      free(pageData);
+      return RBFM_INVALID_RID;
+      break;
+    }
+    case moved:     //recurssive call to fowarding address
+    {
+      cout<< "moved slot\n";
+      free(pageData);
+      return readAttribute(fileHandle, recordDescriptor, tempRecordEntry.forwardAddress, attributeName, data);
       break;
     }
   }
-  free(record);
-  free(pageData);
+  free(pageData);       //should not reach here idealy
   return SUCCESS;
 }
 
@@ -529,43 +554,50 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 
 //returns where the wanted attribute starts
 unsigned RecordBasedFileManager::getAttributeOffset(const void * record, const vector<Attribute> &recordDescriptor, const string &attributeName){
-  cout<< "attibute helper function called\n";
+//  cout<< "attibute helper function called\n";
   unsigned count =0;
   char * temp = (char *)record;                       //to keep data pointer unchanged
   char * temp2 = (char*)record;
   int nullBytes = getNullIndicatorSize(recordDescriptor.size());
+//  cout<< "null bytes = "<<nullBytes<<endl;
   count += nullBytes;             //add bytes to running sum
   temp += nullBytes;
   int varSize = 0;                //for varchar sizes
   int * intTemp;                  //used to cast data stream to int
   for (unsigned i =0; i < recordDescriptor.size(); i ++){
       if(!fieldIsNull(temp2, i)){
-        if (recordDescriptor[i].name == attributeName)      //return where attribute starts
+        if (recordDescriptor[i].name == attributeName){      //return where attribute starts
+//          cout<< "returning count\n";
           return count;
+        }
         switch (recordDescriptor[i].type){
           case TypeInt:     //move over int attribute
           {
+            cout<< "going over int\n";
             count += INT_SIZE;
             temp += INT_SIZE;
             break;
           }
           case TypeReal:    //move over real attribute
           {
+            cout<< "going over real\n";
             count += REAL_SIZE;
             temp += REAL_SIZE;
             break;
           }
           case TypeVarChar:   //move over varchar attribute
           {
+            cout<< "going over var char\n";
             intTemp = (int *)temp;
             varSize = intTemp[0];
+            count += INT_SIZE;
             count += varSize;
+            temp += INT_SIZE;
             temp += varSize;
             break;
           }
         }
       }
-      return RBFM_ATTRIBUTE_OFFSET_FAILURE;
   }
 
 

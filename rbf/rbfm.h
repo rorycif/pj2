@@ -31,6 +31,7 @@
 #define RBFM_EMPTY_SCAN 14
 #define RBFM_INVALID_RID 15
 #define RBFM_EMPTY_PRINT 16
+#define RBFM_INVALID_ATTRIBUTE 17
 
 using namespace std;
 
