@@ -952,12 +952,26 @@ int RBFTest_14(RecordBasedFileManager * rbfm){
     assert(rc == success && "Opening the file should not fail.");
 
     RID rid;
+    int recordSize = 0;
+    vector<Attribute> recordDescriptor;
+    createRecordDescriptor(recordDescriptor);
+    string attributeName = "";
+    void *record = malloc(100);
+    void *returnedData = malloc(100);
+    int nullFieldsIndicatorActualSize = getActualByteForNullsIndicator(recordDescriptor.size());
+    unsigned char *nullsIndicator = (unsigned char *) malloc(nullFieldsIndicatorActualSize);
+    memset(nullsIndicator, 0, nullFieldsIndicatorActualSize);
 
+    prepareRecord(recordDescriptor.size(), nullsIndicator, 9, "read___me", 27, 177.8, 6200, record, &recordSize);
+
+    rc = rbfm->insertRecord(fileHandle, recordDescriptor, record, rid);
+
+    RBFM_ScanIterator rbfmScanIterator;
     rc = rbfm->closeFile(fileHandle);
     rc = rbfm->destroyFile(fileName);
-//    free(record);
-//    free(returnedData);
-//    free(nullsIndicator);
+    free(record);
+    free(returnedData);
+    free(nullsIndicator);
     return 0;
 }
 

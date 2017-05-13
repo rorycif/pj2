@@ -473,12 +473,12 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
   switch (tempRecordEntry.statFlag) {
     case alive:     //return the attribute
     {
-      cout<< "alive slot\n";
+//      cout<< "alive slot\n";
       void * fullRecord = malloc(tempRecordEntry.length);
       unsigned attributeOffset =0;
       if (readRecord(fileHandle,recordDescriptor,rid,fullRecord))     //reading record shoudl work
         return RBFM_READ_FAILED;
-      cout<< "verify record\n";
+//      cout<< "verify record\n";
       if (fieldIsNull((char*)fullRecord, AttPos)){   //return null string
         string out = "NULL";
         char * ptr = &out[0u];
@@ -490,12 +490,12 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
       printRecord(recordDescriptor, fullRecord);
       char * record = (char *) fullRecord;
       attributeOffset = getAttributeOffset(fullRecord, recordDescriptor, attributeName);
-      cout<< "offset "<<attributeOffset<<endl;
+//      cout<< "offset "<<attributeOffset<<endl;
       record += attributeOffset;          //move to position of record;
       switch (recordDescriptor[AttPos].type) {
         case TypeInt:
         {
-          cout<< "type int\n";
+//          cout<< "type int\n";
           int * tempInt = (int *)record;      //cast
           int value = tempInt[0];
           memcpy(data, &value, INT_SIZE);
@@ -503,14 +503,14 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
         }
         case TypeReal:
         {
-          cout<< "type real\n";
+//          cout<< "type real\n";
           float * tempFloat = (float *)record;
           memcpy(data, &tempFloat[0], REAL_SIZE);
           break;
         }
         case TypeVarChar:
         {
-          cout<< "type var char\n";
+//          cout<< "type var char\n";
           int * cast = (int *)record;     //casting for size
           int size = cast[0];
           record += INT_SIZE;
