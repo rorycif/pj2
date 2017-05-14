@@ -569,8 +569,9 @@ RC RelationManager::getTableInfoByTableName(string tableName, TablesCatalogEntry
         if ((tableName.compare(tempTablesCatalogEntry.tableName)) == 0)
         {
             tablesCatalogEntry->tableId = tempTablesCatalogEntry.tableId;
-            tablesCatalogEntry->tableName = tableName;
-            tablesCatalogEntry->fileName = tempTablesCatalogEntry.fileName;
+            strcpy(tablesCatalogEntry->tableName, tableName.c_str());
+            strcpy(tablesCatalogEntry->fileName, tempTablesCatalogEntry.fileName);
+//            tablesCatalogEntry->fileName = tempTablesCatalogEntry.fileName;
             fclose(pTablesFile);
             return SUCCESS;
         } 
@@ -603,8 +604,8 @@ RC RelationManager::isTableNameExistInCatalog(string tableName, FILE * tablesCat
 void RelationManager::updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, uint32_t tableId, string tableName, string fileName)
 {
 	tablesCatalogEntry->tableId = tableId;
-	tablesCatalogEntry->tableName = tableName;
-	tablesCatalogEntry->fileName = fileName;
+	strcpy(tablesCatalogEntry->tableName, tableName.c_str());
+	strcpy(tablesCatalogEntry->fileName,fileName.c_str());
 }
 
 RC RelationManager::insertTablesCatalogEntries(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntries, uint32_t numOfEntry)
@@ -702,7 +703,7 @@ void RelationManager::updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCat
 											AttrType columnType, uint32_t columnLength, uint32_t columnPosition)
  {
     columnsCatalogEntry->tableId = tableId;
-    columnsCatalogEntry->columnName = columnName;
+    strcpy(columnsCatalogEntry->columnName,columnName.c_str());
     columnsCatalogEntry->columnType = columnType;
     columnsCatalogEntry->columnLength = columnLength;
     columnsCatalogEntry->columnPosition = columnPosition;

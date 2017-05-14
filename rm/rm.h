@@ -43,6 +43,8 @@ using namespace std;
 #define TABLE_DOES_NOT_EXIST 8
 #define UPDATE_FAILED 9
 
+#define MAX_NAMESIZE 51
+
 // Catalog Tables
 // Tables Catelog
 typedef struct TablesCatalogHeader {
@@ -53,8 +55,8 @@ typedef struct TablesCatalogHeader {
 
 typedef struct TablesCatalogEntry {
   uint32_t tableId;
-  string tableName;
-  string fileName;
+  char tableName[MAX_NAMESIZE];
+  char fileName[MAX_NAMESIZE];
 } TablesCatalogEntry;
 
 // Columns Catelog
@@ -65,7 +67,7 @@ typedef struct TablesCatalogEntry {
 
 typedef struct ColumnsCatalogEntry {
   uint32_t tableId;
-  string columnName;
+  char columnName[MAX_NAMESIZE];
   AttrType columnType;
   uint32_t columnLength;
   uint32_t columnPosition;
