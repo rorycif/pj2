@@ -28,6 +28,7 @@ using namespace std;
 #define RM_READ_FAILED 11
 #define RM_TABLE_IS_DELETED 12
 #define RM_UPDATE_FAILED 13
+#define RM_SCANFAILED 14
 
 #define MAX_NAMESIZE 51
 #define RM_RECORD_NOT_FOUND -1
@@ -63,14 +64,19 @@ typedef struct ColumnsCatalogEntry {
 // RM_ScanIterator is an iteratr to go through tuples
 class RM_ScanIterator {
 public:
-  RM_ScanIterator() {};
-  ~RM_ScanIterator() {};
-
-  // "data" follows the same format as RelationManager::insertTuple()
-  RC getNextTuple(RID &rid, void *data) { return RM_EOF; };
-  RC close() { return -1; };
+ RM_ScanIterator() {};
+ ~RM_ScanIterator() {};
+ FileHandle * fhp;                     //pointer to a filehandle for method access
+ string fileName;                      //the file where records lie
+ vector <Attribute> SI_recordDescriptor;
+ vector <string> targetAttributes;
+ unsigned recordLength;
+ unsigned nulls;
+ vector<RID> records;
+ // "data" follows the same format as RelationManager::insertTuple()
+ RC getNextTuple(RID &rid, void *data);
+ RC close();
 };
-
 
 // Relation Manager
 class RelationManager

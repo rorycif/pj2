@@ -115,19 +115,19 @@ The scan iterator is NOT required to be implemented for the part 1 of the projec
 
 class RBFM_ScanIterator {
 public:
-  FileHandle * fhp;                     //pointer to a filehandle for method access
-  string fileName;                      //the file where records lie
-  vector <Attribute> SI_recordDescriptor;
-  vector<RID> records;
-  RBFM_ScanIterator() {};
-  ~RBFM_ScanIterator() {};
-
-  string getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, AttrType type);
-  // Never keep the results in the memory. When getNextRecord() is called,
-  // a satisfying record needs to be fetched from the file.
-  // "data" follows the same format as RecordBasedFileManager::insertRecord().
-  RC getNextRecord(RID &rid, void *data);
-  RC close() { return -1; };
+ FileHandle * fhp;                     //pointer to a filehandle for method access
+ string fileName;                      //the file where records lie
+ vector <Attribute> SI_recordDescriptor;
+ vector<RID> records;
+ unsigned recordLength;
+ unsigned nulls;
+ RBFM_ScanIterator() {};
+ ~RBFM_ScanIterator() {};  string getFileName(const void * value, string conditionAttribute, CompOp compOp, vector<string> attributeNames, AttrType type);
+ // Never keep the results in the memory. When getNextRecord() is called,
+ // a satisfying record needs to be fetched from the file.
+ // "data" follows the same format as RecordBasedFileManager::insertRecord().
+ RC getNextRecord(RID &rid, void *data);
+ RC close() { return -1; };
 };
 
 
@@ -187,7 +187,9 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
       const void *value,                    // used in the comparison
       const vector<string> &attributeNames, // a list of projected attributes
       RBFM_ScanIterator &rbfm_ScanIterator);
-
+		
+		
+  	int getNullIndicatorSize(int fieldCount);
 public:
 
 protected:
@@ -211,7 +213,7 @@ private:
   unsigned getPageFreeSpaceSize(void * page);
   unsigned getRecordSize(const vector<Attribute> &recordDescriptor, const void *data);
 
-  int getNullIndicatorSize(int fieldCount);
+
   bool fieldIsNull(char *nullIndicator, int i);
 
   void setRecordAtOffset(void *page, unsigned offset, const vector<Attribute> &recordDescriptor, const void *data);

@@ -285,7 +285,7 @@ RC RelationManager::deleteTable(const string &tableName)
     currentOffset = sizeof(ColumnsCatalogHeader);
     numOfRecords = (tempColumnsCatalogHeader.freeSpaceOffset - sizeof(ColumnsCatalogHeader)) / sizeof(ColumnsCatalogEntry);
     
-    for (uint32_t j = 0; j <= numOfRecords; j++)
+    for (uint32_t j = 0; j < numOfRecords; j++)
     {
     	if (fseek(pColumnsFile, currentOffset, SEEK_SET))
     		return RM_SEEK_FAILED;
@@ -296,6 +296,7 @@ RC RelationManager::deleteTable(const string &tableName)
   		{  	
   			// set the target record to dead
 			tempColumnsCatalogEntry.flag = dead;
+			fseek(pColumnsFile, currentOffset, SEEK_SET);
 			if (fwrite(&tempColumnsCatalogEntry, sizeof(ColumnsCatalogEntry), 1, pColumnsFile) != 1)
 				return RM_WRITE_FAILED;
 			
@@ -313,6 +314,7 @@ RC RelationManager::deleteTable(const string &tableName)
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
+cout << " -ab " << endl;
     TablesCatalogEntry tempTablesCatalogEntry;
     uint32_t tableId;
     string fileName;
@@ -322,12 +324,11 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
     tableId = tempTablesCatalogEntry.tableId;
     fileName = tempTablesCatalogEntry.fileName;
-
+    
     // Check if the RBF file exists
     if (!fileExists(fileName)) {
         return RM_FILE_DOES_NOT_EXIST;
     }
-
     // check if columns catalog exist
     if (!fileExists(columnsCatalogName))
         return RM_FILE_DOES_NOT_EXIST;
@@ -348,12 +349,13 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
         if (getColumnsCatalogEntry(pColumnsFile, offset, &tempColumnsCatalogEntry))
             return RM_READ_FAILED;
 
-		if (tempColumnsCatalogEntry.flag == dead)
-			return RM_TABLE_IS_DELETED;
-
         // find the target attributes
         if (tableId == tempColumnsCatalogEntry.tableId)
         {
+        	// check if the column is deleted
+			if (tempColumnsCatalogEntry.flag == dead)
+				return RM_TABLE_IS_DELETED;
+				
             tempAttr.name = tempColumnsCatalogEntry.columnName;
             tempAttr.type = tempColumnsCatalogEntry.columnType;
             tempAttr.length = tempColumnsCatalogEntry.columnLength;
@@ -540,14 +542,83 @@ RC RelationManager::readAttribute(const string &tableName, const RID &rid, const
 }
 
 RC RelationManager::scan(const string &tableName,
-      const string &conditionAttribute,
-      const CompOp compOp,
-      const void *value,
-      const vector<string> &attributeNames,
-      RM_ScanIterator &rm_ScanIterator)
+     const string &conditionAttribute,
+     const CompOp compOp,
+     const void *value,
+     const vector<string> &attributeNames,
+     RM_ScanIterator &rm_ScanIterator)
 {
-    return -1;
+ rm_ScanIterator.targetAttributes = attributeNames;  //table existance check
+ TablesCatalogEntry tempTablesCatalogEntry;
+ string fileName;  // check if the table and the file of table exist
+ if (getTableInfoByTableName(tableName, &tempTablesCatalogEntry))
+     return RM_TABLE_DOES_NOT_EXIST;
+ fileName = tempTablesCatalogEntry.fileName;
+ if (!fileExists(fileName))
+     return RM_FILE_DOES_NOT_EXIST;  // open table file
+ RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+ FileHandle fileHandle;
+ _rbfm->openFile(fileName, fileHandle);  // get tuple attributes from catalogs
+ vector<Attribute> tupleAttrs;
+ if (getAttributes(fileName, tupleAttrs))
+     return RM_READ_FAILED;
+ //call rbfm layer
+ RBFM_ScanIterator scanIterator;
+//  cout<< "condition: "<<cond<<endl;
+	cout<< "vector sizes: "<< tupleAttrs.size()<<endl;
+ if (_rbfm->scan(fileHandle, tupleAttrs, conditionAttribute, compOp, value, attributeNames, scanIterator)){
+    cout<< "scan failed\n";
+   return RM_SCANFAILED;
+ }
+ rm_ScanIterator.fhp  = scanIterator.fhp;
+ rm_ScanIterator.fileName = fileName;
+ rm_ScanIterator.recordLength = scanIterator.recordLength;
+ rm_ScanIterator.SI_recordDescriptor = scanIterator.SI_recordDescriptor;
+ rm_ScanIterator.records = scanIterator.records;
+//  cout<< "done in scan function\n";
+ return SUCCESS;
 }
+
+RC RM_ScanIterator::getNextTuple(RID &rid, void *data){
+ //get vector position
+//  cout<< "getting next tuple total size: "<<recordLength<<endl;
+ unsigned pos =0;
+ void * record = malloc(recordLength);
+ for (unsigned i =0; i < records.size(); i++){
+   if (records[i].pageNum == rid.pageNum && records[i].slotNum == rid.pageNum)
+     pos = i;
+ }
+//  pos++;
+ //read record
+ RecordBasedFileManager * _rbfm = RecordBasedFileManager::instance();
+ unsigned nulls = _rbfm->getNullIndicatorSize(targetAttributes.size());
+ FileHandle fileHandle;
+//  cout<< "opening file\n";
+//  cout<< "filename: "<<fileName<<endl;
+ _rbfm->openFile(fileName,fileHandle);
+ _rbfm->readRecord(fileHandle, SI_recordDescriptor, records[pos], record);
+ memcpy(data,record,nulls);
+ for (unsigned i =0; i < targetAttributes.size(); i ++){
+   _rbfm->readAttribute(fileHandle, SI_recordDescriptor, rid, targetAttributes[i],data);
+ }
+//  cout<< "done opening\n";
+ //if vector end return end of file
+ if (pos == records.size()-1){
+   free(record);
+   return RM_EOF;
+ }
+ //set next rid
+ rid.pageNum = records[pos].pageNum;
+ rid.slotNum = records[pos].slotNum;
+//  cout<< "done with getting tuple\n";
+ free(record);
+ return RM_EOF;
+}
+
+RC RM_ScanIterator::close(){
+	records.clear();
+	return SUCCESS;
+	}
 
 // ********************** Helper function **********************
 bool RelationManager::fileExists(const string &filename)
@@ -562,7 +633,6 @@ RC RelationManager::getTableInfoByTableName(string tableName, TablesCatalogEntry
     // Check if catalog files exist
     if (!fileExists(tablesCatalogName))
         return RM_FILE_DOES_NOT_EXIST;
-        
     // get file name from tables catalog
     TablesCatalogHeader tempTablesCatalogHeader;
     FILE * pTablesFile = fopen(tablesCatalogName.c_str(), "rb");
@@ -578,11 +648,12 @@ RC RelationManager::getTableInfoByTableName(string tableName, TablesCatalogEntry
         if (getTablesCatalogEntry(pTablesFile, offset, &tempTablesCatalogEntry))
             return RM_READ_FAILED;
         
-        if (tempTablesCatalogEntry.flag == dead)
-        	return RM_TABLE_IS_DELETED;
-        
         if ((tableName.compare(tempTablesCatalogEntry.tableName)) == 0)
         {
+        	// check if table is deleted
+        	if (tempTablesCatalogEntry.flag == dead)
+        	return RM_TABLE_IS_DELETED;
+        	
             tablesCatalogEntry->tableId = tempTablesCatalogEntry.tableId;
             strcpy(tablesCatalogEntry->tableName, tableName.c_str());
             strcpy(tablesCatalogEntry->fileName, tempTablesCatalogEntry.fileName);

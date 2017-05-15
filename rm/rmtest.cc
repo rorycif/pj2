@@ -332,6 +332,7 @@ RC TEST_RM_6(const string &tableName)
     // Test Insert Tuple
     vector<Attribute> attrs;
     RC rc = rm->getAttributes(tableName, attrs);
+    
     assert(rc == success && "RelationManager::getAttributes() should not fail.");
 
     int nullAttributesIndicatorActualSize = getActualByteForNullsIndicator(attrs.size());
@@ -361,6 +362,7 @@ RC TEST_RM_6(const string &tableName)
     vector<string> attributes;
     attributes.push_back(attr);
     rc = rm->scan(tableName, "", NO_OP, NULL, attributes, rmsi);
+    cout<< "scan return: "<<rc<<endl;
     assert(rc == success && "RelationManager::scan() should not fail.");
     
     nullAttributesIndicatorActualSize = getActualByteForNullsIndicator(attributes.size());
@@ -446,7 +448,9 @@ RC TEST_RM_8(const string &tableName, vector<RID> &rids, vector<int> &sizes)
 
     // GetAttributes
     vector<Attribute> attrs;
+//    cout<< "before get\n";
     RC rc = rm->getAttributes(tableName, attrs);
+//    cout<< "rc: "<<rc<<endl;
     assert(rc == success && "RelationManager::getAttributes() should not fail.");
 
     int nullAttributesIndicatorActualSize = getActualByteForNullsIndicator(attrs.size());
@@ -456,18 +460,20 @@ RC TEST_RM_8(const string &tableName, vector<RID> &rids, vector<int> &sizes)
     // Insert 2000 tuples into table
     for(int i = 0; i < numTuples; i++)
     {
+cout<< "***********" << i << endl;
         // Test insert Tuple
         int size = 0;
         memset(tuple, 0, 2000);
         prepareLargeTuple(attrs.size(), nullsIndicator, i, tuple, &size);
-
+cout<< "a" << endl;
         rc = rm->insertTuple(tableName, tuple, rid);
+cout<< "b" << endl;
         assert(rc == success && "RelationManager::insertTuple() should not fail.");
 
         rids.push_back(rid);
         sizes.push_back(size);        
     }
-
+	cout<< "out"<<endl;
     free(tuple);
     writeRIDsToDisk(rids);
     writeSizesToDisk(sizes);

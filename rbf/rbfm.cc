@@ -339,68 +339,71 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
     return RBFM_CANT_UPDATE;    //should not make it here but to remove compiler warning
 }
 
-RC RecordBasedFileManager::scan(FileHandle &fileHandle,
-    const vector<Attribute> &recordDescriptor,
-    const string &conditionAttribute,
-    const CompOp compOp,                  // comparision type such as "<" and "="
-    const void *value,                    // used in the comparison
-    const vector<string> &attributeNames, // a list of projected attributes
-    RBFM_ScanIterator &rbfm_ScanIterator){
-      //validations
-      cout<< "in rbfm scan\n";
-      unsigned pageCount = fileHandle.getNumberOfPages();
-      if (!pageCount || !recordDescriptor.size() || attributeNames.size() > recordDescriptor.size())
-        return RBFM_EMPTY_SCAN;
-      cout<< "passed first verification\n";
-      cout<< conditionAttribute<<endl;
-      AttrType targetType;
-      bool noOperation = false;
-      if (compOp == NO_OP && conditionAttribute == "")    //valid call
-        noOperation = true;
-      bool isInVector = false;                      //used to find if the condition name exist in record descriptor vector
-      for (unsigned i =0; i < recordDescriptor.size(); i++){
-        if (recordDescriptor[i].name == conditionAttribute){
-          cout<< "type determind\n";
-          targetType = recordDescriptor[i].type;
-          isInVector = true;
-        }
-      }
-      if (!isInVector && !noOperation)
-        return RBFM_ATTRIBUTE_DN_EXIST;
-      cout<< "passed second verification\n";
 
-      //iterate though pages
-      void * currentPage;
-      void * currentRecord;
-      RID tempRid;
-      SlotDirectoryHeader tempHeader;
-      SlotDirectoryRecordEntry tempRecordEntry;
-      for (unsigned i =0; i < pageCount; i++){
+RC RecordBasedFileManager::scan(FileHandle &fileHandle,
+   const vector<Attribute> &recordDescriptor,
+   const string &conditionAttribute,
+   const CompOp compOp,                  // comparision type such as "<" and "="
+   const void *value,                    // used in the comparison
+   const vector<string> &attributeNames, // a list of projected attributes
+   RBFM_ScanIterator &rbfm_ScanIterator){
+     //validations
+      cout<< "in rbfm scan\n";
+     unsigned pageCount = fileHandle.getNumberOfPages();
+     cout<< "page count: "<< pageCount<<endl;
+     cout<< "size: "<<recordDescriptor.size()<<endl;
+     if (!pageCount || !recordDescriptor.size() || attributeNames.size() > recordDescriptor.size())
+       return RBFM_EMPTY_SCAN;
+      cout<< "passed first verification\n";
+     cout<< conditionAttribute<<endl;
+     AttrType targetType;
+     bool noOperation = false;
+     if (compOp == NO_OP && conditionAttribute == "")    //valid call
+       noOperation = true;
+     bool isInVector = false;                      //used to find if the condition name exist in record descriptor vector
+     for (unsigned i =0; i < recordDescriptor.size(); i++){
+       if (recordDescriptor[i].name == conditionAttribute){
+//          cout<< "type determind\n";
+         targetType = recordDescriptor[i].type;
+         isInVector = true;
+       }
+     }
+     if (!isInVector && !noOperation)
+       return RBFM_ATTRIBUTE_DN_EXIST;
+//      cout<< "passed second verification\n";      //iterate though pages
+     void * currentPage;
+     void * currentRecord;
+     RID tempRid;
+     SlotDirectoryHeader tempHeader;
+     SlotDirectoryRecordEntry tempRecordEntry;
+     for (unsigned i =0; i < pageCount; i++){
 //        cout<<"scaning page "<<i<<endl;
-        currentPage = malloc(PAGE_SIZE);
-        fileHandle.readPage(i,currentPage);
-        tempHeader = getSlotDirectoryHeader(currentPage);
-        //iterate though each record on page
-        for (unsigned j =0; j < tempHeader.recordEntriesNumber; j ++){
+       currentPage = malloc(PAGE_SIZE);
+       fileHandle.readPage(i,currentPage);
+       tempHeader = getSlotDirectoryHeader(currentPage);
+       //iterate though each record on page
+       for (unsigned j =0; j < tempHeader.recordEntriesNumber; j ++){
 //          cout<< "iterating through record "<< j<<endl;
-          tempRecordEntry = getSlotDirectoryRecordEntry(currentPage,j);
-          currentRecord = malloc(tempRecordEntry.length);
-          getRecordAtOffset(currentPage, tempRecordEntry.offset, recordDescriptor, currentRecord);
-          //compare the record for condition
-          if (compareAttributes(currentRecord, value, targetType, conditionAttribute, recordDescriptor, compOp)){
-            tempRid.pageNum =i;
-            tempRid.slotNum =j;
-            rbfm_ScanIterator.records.push_back(tempRid);     //the record's location is saved to iterator
-          }
-          free (currentRecord);
-        }
-        free(currentPage);
+         tempRecordEntry = getSlotDirectoryRecordEntry(currentPage,j);
+         currentRecord = malloc(tempRecordEntry.length);
+         rbfm_ScanIterator.recordLength = tempRecordEntry.length;
+         rbfm_ScanIterator.nulls = getNullIndicatorSize(recordDescriptor.size());
+         getRecordAtOffset(currentPage, tempRecordEntry.offset, recordDescriptor, currentRecord);
+         //compare the record for condition
+         if (compareAttributes(currentRecord, value, targetType, conditionAttribute, recordDescriptor, compOp)){
+           tempRid.pageNum =i;
+           tempRid.slotNum =j;
+           rbfm_ScanIterator.records.push_back(tempRid);     //the record's location is saved to iterator
+         }
+         free (currentRecord);
+       }
+       free(currentPage);
 //        cout<< "moving on to next page\n";
-      }
-    rbfm_ScanIterator.fhp = &fileHandle;          //so scan iterater knows which file to read from
-    rbfm_ScanIterator.SI_recordDescriptor = recordDescriptor;
-      return SUCCESS;
-    }
+     }
+   rbfm_ScanIterator.fhp = &fileHandle;          //so scan iterater knows which file to read from
+   rbfm_ScanIterator.SI_recordDescriptor = recordDescriptor;
+     return SUCCESS;
+   }
 
 //helper function when a new page with enough space is needed
 unsigned RecordBasedFileManager::getAvailablePage(unsigned size, FileHandle &fileHandle){
