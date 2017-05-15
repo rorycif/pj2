@@ -20,13 +20,12 @@ using namespace std;
 #define RM_DELETE_FAILED 3
 #define RM_FILE_OPEN_FAILED 4
 #define RM_INCORRECT_INPUT 5
-#define RM_RM_SEEK_FAILED 6
+#define RM_SEEK_FAILED 6
 #define RM_WRITE_FAILED 7
 #define RM_TABLE_DOES_NOT_EXIST 8
 #define RM_TABLE_ALREADY_EXIST 9
 #define RM_INSERT_FAILED 10
-#define RM_SEEK_FAILED 11
-#define RM_READ_FAILED 12
+#define RM_READ_FAILED 11
 
 // OLD -- TBD
 #define FILE_EXISTS 1
@@ -44,6 +43,7 @@ using namespace std;
 #define UPDATE_FAILED 9
 
 #define MAX_NAMESIZE 51
+#define RM_RECORD_NOT_FOUND -1
 
 // Catalog Tables
 // Tables Catelog
@@ -156,6 +156,7 @@ private:
   void updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, uint32_t tableId, string columnName, AttrType columnType, uint32_t columnLength, uint32_t columnPosition);
   RC insertColumnsCatalogEntries(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntries, uint32_t numOfEntry, uint32_t freeSpaceOffset);
   RC getColumnsCatalogEntry(FILE * pColumnsFile, uint32_t recordOffset, ColumnsCatalogEntry * columnsCatalogEntry);
+  RC findNextTargetRecord(FILE * pColumnsFile, uint32_t tableId, uint32_t head, uint32_t end, uint32_t * targetOffset);
 
   // ColumnsCatalogHeader
   void initializeColumnsCatalogHeader(ColumnsCatalogHeader * columnsCatalogHeader);
