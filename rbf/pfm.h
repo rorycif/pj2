@@ -56,10 +56,11 @@ public:
     unsigned writePageCounter;
     unsigned appendPageCounter;
     string fileName;
-    
+    FILE *_fd;
+
     FileHandle();                                                       // Default constructor
     ~FileHandle();                                                      // Destructor
-    
+
 
     RC readPage(PageNum pageNum, void *data);                           // Get a specific page
     RC writePage(PageNum pageNum, const void *data);                    // Write a specific page
@@ -71,7 +72,6 @@ public:
     friend class PagedFileManager;
 
 private:
-    FILE *_fd;
     FILE *getfd();
     // Private helper methods
     void setfd(FILE *fd);

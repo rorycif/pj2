@@ -347,10 +347,16 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
     const vector<string> &attributeNames, // a list of projected attributes
     RBFM_ScanIterator &rbfm_ScanIterator){
       //validations
+      cout<< "in rbfm scan\n";
       unsigned pageCount = fileHandle.getNumberOfPages();
       if (!pageCount || !recordDescriptor.size() || attributeNames.size() > recordDescriptor.size())
         return RBFM_EMPTY_SCAN;
+      cout<< "passed first verification\n";
+      cout<< conditionAttribute<<endl;
       AttrType targetType;
+      bool noOperation = false;
+      if (compOp == NO_OP && conditionAttribute == "")    //valid call
+        noOperation = true;
       bool isInVector = false;                      //used to find if the condition name exist in record descriptor vector
       for (unsigned i =0; i < recordDescriptor.size(); i++){
         if (recordDescriptor[i].name == conditionAttribute){
@@ -359,11 +365,9 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
           isInVector = true;
         }
       }
-      if (!isInVector)
+      if (!isInVector && !noOperation)
         return RBFM_ATTRIBUTE_DN_EXIST;
-
-      //make file for scan iterator
-      string fileName = rbfm_ScanIterator.getFileName(value, conditionAttribute, compOp, attributeNames,targetType);
+      cout<< "passed second verification\n";
 
       //iterate though pages
       void * currentPage;
@@ -372,13 +376,13 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
       SlotDirectoryHeader tempHeader;
       SlotDirectoryRecordEntry tempRecordEntry;
       for (unsigned i =0; i < pageCount; i++){
-        cout<<"scaning page "<<i<<endl;
+//        cout<<"scaning page "<<i<<endl;
         currentPage = malloc(PAGE_SIZE);
         fileHandle.readPage(i,currentPage);
         tempHeader = getSlotDirectoryHeader(currentPage);
         //iterate though each record on page
         for (unsigned j =0; j < tempHeader.recordEntriesNumber; j ++){
-          cout<< "iterating through record "<< j<<endl;
+//          cout<< "iterating through record "<< j<<endl;
           tempRecordEntry = getSlotDirectoryRecordEntry(currentPage,j);
           currentRecord = malloc(tempRecordEntry.length);
           getRecordAtOffset(currentPage, tempRecordEntry.offset, recordDescriptor, currentRecord);
@@ -391,7 +395,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
           free (currentRecord);
         }
         free(currentPage);
-        cout<< "moving on to next page\n";
+//        cout<< "moving on to next page\n";
       }
     rbfm_ScanIterator.fhp = &fileHandle;          //so scan iterater knows which file to read from
     rbfm_ScanIterator.SI_recordDescriptor = recordDescriptor;
@@ -473,44 +477,45 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
   switch (tempRecordEntry.statFlag) {
     case alive:     //return the attribute
     {
-//      cout<< "alive slot\n";
       void * fullRecord = malloc(tempRecordEntry.length);
       unsigned attributeOffset =0;
       if (readRecord(fileHandle,recordDescriptor,rid,fullRecord))     //reading record shoudl work
         return RBFM_READ_FAILED;
-//      cout<< "verify record\n";
+      unsigned nullIdicatorBytes =getNullIndicatorSize(recordDescriptor.size());
+      void * nulls = malloc(nullIdicatorBytes);
+      memcpy(nulls,fullRecord, nullIdicatorBytes);
       if (fieldIsNull((char*)fullRecord, AttPos)){   //return null string
         string out = "NULL";
         char * ptr = &out[0u];
-        memcpy(data, &out, 4);
+        memcpy(data, nulls, nullIdicatorBytes);
+        memcpy(data + nullIdicatorBytes, &out, 4);
         free(fullRecord);
         free(pageData);
         return SUCCESS;
       }
-      printRecord(recordDescriptor, fullRecord);
+//      printRecord(recordDescriptor, fullRecord);
       char * record = (char *) fullRecord;
       attributeOffset = getAttributeOffset(fullRecord, recordDescriptor, attributeName);
-//      cout<< "offset "<<attributeOffset<<endl;
       record += attributeOffset;          //move to position of record;
       switch (recordDescriptor[AttPos].type) {
         case TypeInt:
         {
-//          cout<< "type int\n";
           int * tempInt = (int *)record;      //cast
           int value = tempInt[0];
-          memcpy(data, &value, INT_SIZE);
+//          cout<< "int value: "<<value<<endl;
+          memcpy(data,nulls, nullIdicatorBytes);
+          memcpy(data + nullIdicatorBytes, &value, INT_SIZE);
           break;
         }
         case TypeReal:
         {
-//          cout<< "type real\n";
           float * tempFloat = (float *)record;
-          memcpy(data, &tempFloat[0], REAL_SIZE);
+          memcpy(data,nulls,nullIdicatorBytes);
+          memcpy(data + nullIdicatorBytes, &tempFloat[0], REAL_SIZE);
           break;
         }
         case TypeVarChar:
         {
-//          cout<< "type var char\n";
           int * cast = (int *)record;     //casting for size
           int size = cast[0];
           record += INT_SIZE;
@@ -520,12 +525,13 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
             record += 1;
           }
           char* ptr = &out[0u];
-          memcpy(data, &size, INT_SIZE);        //add the size of return value
-          memcpy(data + INT_SIZE, ptr, size);   //add the actual data
+          memcpy(data, nulls, nullIdicatorBytes);
+          memcpy(data + nullIdicatorBytes, &size, INT_SIZE);        //add the size of return value
+          memcpy(data + INT_SIZE + nullIdicatorBytes, ptr, size);   //add the actual data
           break;
         }
       }
-
+      free(nulls);
       free(pageData);
       free(fullRecord);
       return SUCCESS;
@@ -573,21 +579,21 @@ unsigned RecordBasedFileManager::getAttributeOffset(const void * record, const v
         switch (recordDescriptor[i].type){
           case TypeInt:     //move over int attribute
           {
-            cout<< "going over int\n";
+//            cout<< "going over int\n";
             count += INT_SIZE;
             temp += INT_SIZE;
             break;
           }
           case TypeReal:    //move over real attribute
           {
-            cout<< "going over real\n";
+//            cout<< "going over real\n";
             count += REAL_SIZE;
             temp += REAL_SIZE;
             break;
           }
           case TypeVarChar:   //move over varchar attribute
           {
-            cout<< "going over var char\n";
+//            cout<< "going over var char\n";
             intTemp = (int *)temp;
             varSize = intTemp[0];
             count += INT_SIZE;
@@ -901,9 +907,13 @@ string RBFM_ScanIterator::getFileName(const void * value, string conditionAttrib
 //if a record meets the critera this will return true
 bool RecordBasedFileManager::compareAttributes(const void * record, const void * value, AttrType type, string conditionAttribute, vector<Attribute> recordDescriptor, CompOp compOp){
   //get attribute location
-  cout<< "comparing attributes\n";
+//  cout<< "comparing attributes\n";
   unsigned start = getAttributeOffset(record, recordDescriptor, conditionAttribute);
   char * recordCast = (char*)record;              //avoid compiler errors
+  if (conditionAttribute == ""){
+//    cout<< "no attribute comparison\n";
+    return true;
+  }
   //cast to valid type
   switch (type) {
     case TypeInt:       //comparing intergers
