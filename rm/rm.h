@@ -26,21 +26,8 @@ using namespace std;
 #define RM_TABLE_ALREADY_EXIST 9
 #define RM_INSERT_FAILED 10
 #define RM_READ_FAILED 11
-
-// OLD -- TBD
-#define FILE_EXISTS 1
-#define FILE_DOES_NOT_EXIST 2
-#define FILE_OPEN_FAILED 3
-
-#define SEEK_FAILED 1
-#define WRITE_FAILED 2
-#define INSERT_FAILED 3
-#define READ_FAILED 4
-#define RENAME_FAILED 5
-#define TRANSFER_FAILED 6
-#define DELETE_FAILED 7
-#define TABLE_DOES_NOT_EXIST 8
-#define UPDATE_FAILED 9
+#define RM_TABLE_IS_DELETED 12
+#define RM_UPDATE_FAILED 13
 
 #define MAX_NAMESIZE 51
 #define RM_RECORD_NOT_FOUND -1
@@ -49,11 +36,11 @@ using namespace std;
 // Tables Catelog
 typedef struct TablesCatalogHeader {
   uint32_t nextTableId; // id number for the next new record
-  uint32_t numOfRecords;
   uint32_t freeSpaceOffset;
 } TablesCatalogHeader;
 
 typedef struct TablesCatalogEntry {
+  Status flag;
   uint32_t tableId;
   char tableName[MAX_NAMESIZE];
   char fileName[MAX_NAMESIZE];
@@ -61,11 +48,11 @@ typedef struct TablesCatalogEntry {
 
 // Columns Catelog
   typedef struct ColumnsCatalogHeader {
-    uint32_t numOfRecords;
     uint32_t freeSpaceOffset;
   } ColumnsCatalogHeader;
 
 typedef struct ColumnsCatalogEntry {
+  Status flag;
   uint32_t tableId;
   char columnName[MAX_NAMESIZE];
   AttrType columnType;
@@ -142,7 +129,7 @@ private:
   RC isTableNameExistInCatalog(string tableName, FILE * tablesCatalogFile, uint32_t numOfRecords);
 
   // TablesCatalogEntry
-  void updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, uint32_t tableId, string tableName, string fileName);
+  void updateTablesCatalogEntry(TablesCatalogEntry * tablesCatalogEntry, Status flag, uint32_t tableId, string tableName, string fileName);
   RC insertTablesCatalogEntries(FILE * pTablesFile, TablesCatalogEntry * tablesCatalogEntries, uint32_t numOfEntry);
   RC getTablesCatalogEntry(FILE * pTablesFile, uint32_t recordOffset, TablesCatalogEntry * tablesCatalogEntry);
 
@@ -153,8 +140,8 @@ private:
   RC getTablesCatalogHeader(TablesCatalogHeader * tablesCatalogHeader, FILE * pTablesFile);
 
   // ColumnsCatalogEntry
-  void updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, uint32_t tableId, string columnName, AttrType columnType, uint32_t columnLength, uint32_t columnPosition);
-  RC insertColumnsCatalogEntries(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntries, uint32_t numOfEntry, uint32_t freeSpaceOffset);
+  void updateColumnsCatalogEntry(ColumnsCatalogEntry * columnsCatalogEntry, Status flag, uint32_t tableId, string columnName, AttrType columnType, uint32_t columnLength, uint32_t columnPosition);
+  RC insertColumnsCatalogEntries(FILE * pColumnsFile, ColumnsCatalogEntry * columnsCatalogEntries, uint32_t numOfEntry, uint32_t targetOffset);
   RC getColumnsCatalogEntry(FILE * pColumnsFile, uint32_t recordOffset, ColumnsCatalogEntry * columnsCatalogEntry);
   RC findNextTargetRecord(FILE * pColumnsFile, uint32_t tableId, uint32_t head, uint32_t end, uint32_t * targetOffset);
 
