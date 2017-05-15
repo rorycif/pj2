@@ -1,0 +1,51 @@
+Team # 16
+members: Diego Garcia, Ion Fong Chan, Sean Laney
+submitted by Diego Garcia dgarci34@
+
+design: we worked off the given solutions for project 1. so we have a slot header
+and slot record entries at the top of the page while we grow inserted records from
+the bottom of the page going back up. the records are the varaiable length implementation
+we have discussed in class with null indicator
+
+rbfm design:
+
+addition of statflag in SlotDirectoryRecordEntry - a flag was added
+to the struct to see if a record entry was dead, alive, or moved. we
+moddified read, update, and delete to act according to these flags.
+If a record was dead and we called these function it woul return an
+error. if it was alive that meant we could execute those Functions.
+If the record was moved then we invoke a recurssive call to the forwardAddress
+which is another RID until we find it.
+
+deleteRecord - we deleteded the actual record data from the page
+however we kept the record entry and updated it to be marked dead
+in a flag we created. we made a function called compaction that
+incrememnts the free space by the size of the record on the page
+
+updateRecord - we we update we fall into three different cases. if
+the new record is bigger we delete the current record, compact the space on page,
+then we insert it again into the file get a new RID pointing as a forwardAddress
+for the current SlotDirectoryRecordEntry. when the record is smaller, we simply compact
+by the change in size and update the page free space offset. if it is the same size
+we just overwrite the record at it's offset.
+
+readAttribute - we validate that the rid exist and it was already inserted then
+based on the stat flag we continue for alive, return error for a dead record,
+call recursively for a moved record. we read the record and use a helper function
+to get to the offset of where the attibute begins and we return null indicators +
+Attribute data
+
+scan - the rbfm scan iterator is linked to a file. when you call scan it saves
+the valid RID's of records that satsisfy the scan condition. we find these by
+comparing the attribute with the passed in value.
+
+RM design:
+
+catalogs we keep two files, one that has all the tables. this file has a header with
+the freespace offset and number of tables that have been inserted. each table entry has
+a table ID that designates it's position in the table entries. when we insert we just
+append a table entry to this file and update the number of entries as well as the offset.
+For our columns file we works a similar way with a header on top followed by column entries
+
+for all functions in rm we simply use the passed in table name to get it's columns
+to create an attribute vector and use that to call on rbfm functions to do the work
